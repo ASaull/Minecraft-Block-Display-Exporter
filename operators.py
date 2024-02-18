@@ -23,6 +23,20 @@ def origin_to_corner(context):
         obj.select_set(True)
 
 
+def convert_coordinates(blender_matrix):
+    """
+    Convert Blender coordinates to Minecraft coordinates.
+    """
+    minecraft_matrix = mathutils.Matrix((
+        blender_matrix[0],
+        blender_matrix[2],
+        -blender_matrix[1],
+        (0, 0, 0, 1)
+    ))
+    print(minecraft_matrix)
+    return minecraft_matrix
+
+
 class GenerateButton(Operator):
     """
     Operator for the generate button.

@@ -8,20 +8,6 @@ from . import block_definitions
 import mathutils
 
 
-def convert_coordinates(blender_matrix):
-    """
-    Convert Blender coordinates to Minecraft coordinates.
-    """
-    minecraft_matrix = mathutils.Matrix((
-        blender_matrix[0],
-        blender_matrix[2],
-        -blender_matrix[1],
-        (0, 0, 0, 1)
-    ))
-    print(minecraft_matrix)
-    return minecraft_matrix
-
-
 def change_block_type(self, context):
     """
     Change the block type for selected objects.
@@ -60,6 +46,7 @@ class McbdeBlockProperties(PropertyGroup):
         description="The type of Minecraft block associated with this mesh",
         update=change_block_type
     )
+
 
 classes = (
     McbdeMenuProperties,
