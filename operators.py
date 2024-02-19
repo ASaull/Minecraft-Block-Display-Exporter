@@ -11,7 +11,7 @@ def origin_to_corner(context):
     bpy.ops.object.select_all(action='DESELECT')
     for obj in tmp_selected:
         obj.select_set(True)
-        bottom_left_location = obj.matrix_world @ obj.data.vertices[0].co
+        bottom_left_location = obj.matrix_world @ obj.data.vertices[2].co
         context.scene.cursor.location = bottom_left_location
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         obj.select_set(False)
@@ -27,13 +27,14 @@ def convert_coordinates(blender_matrix):
     """
     Convert Blender coordinates to Minecraft coordinates.
     """
+    print("Blender:\n", blender_matrix)
     minecraft_matrix = mathutils.Matrix((
-        blender_matrix[0],
-        blender_matrix[2],
-        -blender_matrix[1],
+        (blender_matrix[0][0], blender_matrix[0][2], -blender_matrix[0][1], blender_matrix[0][3]),
+        (blender_matrix[2][0], blender_matrix[2][2], -blender_matrix[2][1], blender_matrix[2][3]-1),
+        (-blender_matrix[1][0], -blender_matrix[1][2], blender_matrix[1][1], -blender_matrix[1][3]),
         (0, 0, 0, 1)
     ))
-    print(minecraft_matrix)
+    print("Minecraft:\n", minecraft_matrix)
     return minecraft_matrix
 
 
@@ -45,22 +46,9 @@ class GenerateButton(Operator):
     bl_label = "Generate"
     bl_description = "Generate command"
 
-    def convert_coordinates(blender_matrix):
-        """
-        Convert Blender coordinates to Minecraft coordinates.
-        """
-        minecraft_matrix = mathutils.Matrix((
-            blender_matrix[0],
-            blender_matrix[2],
-            -blender_matrix[1],
-            (0, 0, 0, 1)
-        ))
-        print(minecraft_matrix)
-        return minecraft_matrix
-
     def execute(self, context):
         origin_location = None
-        command_string = "/summon block_display ~-0.5 ~-0.5 ~0.5 {Passengers: ["
+        command_string = "/summon block_display ~-0.5 ~0.5 ~-0.5 {Passengers: ["
 
         origin_to_corner(context)
 

@@ -39,6 +39,7 @@ class McbdeBlockProperties(PropertyGroup):
         items=(
             ("origin_command_block", "Origin Command Block", "The Command Block from which the command is run. You may only have one of these"),
             ("stone", "Stone", "Stone"),
+            ("oak_log", "Oak Log", "Oak Log"),
             ("dirt", "Dirt", "Dirt"),
         ),
         name="Block Type",
