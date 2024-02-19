@@ -1,5 +1,5 @@
-# Minecraft Block Display Exporter
-## Blender Plugin
+# Minecraft Block Display Exporter Blender Plugin
+
 
 ### TODO
  - Allow custom blocks
