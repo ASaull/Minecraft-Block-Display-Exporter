@@ -52,6 +52,11 @@ class GenerateButton(Operator):
 
         origin_to_corner(context)
 
+        print(type(context.scene.objects))
+        print(context.scene.objects)
+        print(context.scene)
+        print(type(context.scene))
+
         for obj in bpy.context.scene.objects:
             if obj.type == 'MESH' and obj.mcbde:
                 if obj.mcbde.block_type == "origin_command_block":

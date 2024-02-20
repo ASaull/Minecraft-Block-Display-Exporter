@@ -5,8 +5,7 @@ from bpy.props import (
     PointerProperty,
 )
 from . import block_definitions
-import mathutils
-
+        
 
 def change_block_type(self, context):
     """
@@ -22,6 +21,7 @@ class McbdeMenuProperties(PropertyGroup):
     """
     Properties for the MCBDE menu.
     """
+
     command: StringProperty(
         name="Command",
         description="Copy this into your Command Block in Minecraft",
@@ -35,17 +35,17 @@ class McbdeBlockProperties(PropertyGroup):
     """
     Properties for Blender objects which represent Minecraft Blocks
     """
-    block_type: EnumProperty(
-        items=(
-            ("origin_command_block", "Origin Command Block", "The Command Block from which the command is run. You may only have one of these"),
-            ("stone", "Stone", "Stone"),
-            ("oak_log", "Oak Log", "Oak Log"),
-            ("dirt", "Dirt", "Dirt"),
-        ),
+
+    def get_block_list(self, context, edit_text):
+        return [item[0] for item in block_definitions.blocks]
+
+
+    block_type: StringProperty(
         name="Block Type",
         default="stone",
         description="The type of Minecraft block associated with this mesh",
-        update=change_block_type
+        update=change_block_type,
+        search=get_block_list
     )
 
 
@@ -63,6 +63,9 @@ def register():
 
     Object.mcbde = PointerProperty(type=McbdeBlockProperties)
     Scene.mcbde = PointerProperty(type=McbdeMenuProperties)
+
+    #populate_block_collection()
+
     print("set object and scene mcbde")
 
 

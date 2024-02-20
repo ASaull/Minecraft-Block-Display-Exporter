@@ -1,5 +1,4 @@
 from bpy.types import Panel, Object
-import bpy
 
 class McbdePanel(Panel):
     """
@@ -21,7 +20,7 @@ class McbdePanel(Panel):
         col = layout.column()
 
         if active_object and active_object.type == 'MESH' and active_object.mcbde:
-            col.prop(active_object.mcbde, "block_type", text="Block")
+            col.prop(active_object.mcbde, "block_type")
         else:
             layout.label(text="Select a mesh object with MCBDE properties.")
 
