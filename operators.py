@@ -11,6 +11,7 @@ def origin_to_corner(context):
     bpy.ops.object.select_all(action='DESELECT')
     for obj in tmp_selected:
         obj.select_set(True)
+        # Vertex 2 corresponds to the origin of a Minecraft block in Minecraft
         bottom_left_location = obj.matrix_world @ obj.data.vertices[2].co
         context.scene.cursor.location = bottom_left_location
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
@@ -52,11 +53,6 @@ class GenerateButton(Operator):
 
         origin_to_corner(context)
 
-        print(type(context.scene.objects))
-        print(context.scene.objects)
-        print(context.scene)
-        print(type(context.scene))
-
         for obj in bpy.context.scene.objects:
             if obj.type == 'MESH' and obj.mcbde:
                 if obj.mcbde.block_type == "origin_command_block":
@@ -66,9 +62,8 @@ class GenerateButton(Operator):
         if origin_location is None:
             origin_location = mathutils.Vector((0, 0, 0))
 
-        print("Command Block Origin at", origin_location)
         for obj in bpy.context.scene.objects:
-            if obj.type == 'MESH' and obj.mcbde and not obj.mcbde.block_type == "origin_command_block":
+            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type != "" and obj.mcbde.block_type != "origin_command_block":
                 minecraft_matrix = convert_coordinates(obj.matrix_world)
                 transformation_string = (
                     f"transformation: [{round(minecraft_matrix[0][0], 4)}f, {round(minecraft_matrix[0][1], 4)}f, {round(minecraft_matrix[0][2], 4)}f, {round(minecraft_matrix[0][3], 4)}f, "
@@ -76,12 +71,17 @@ class GenerateButton(Operator):
                     f"{round(minecraft_matrix[2][0], 4)}f, {round(minecraft_matrix[2][1], 4)}f, {round(minecraft_matrix[2][2], 4)}f, {round(minecraft_matrix[2][3], 4)}f, "
                     f"{round(minecraft_matrix[3][0], 4)}f, {round(minecraft_matrix[3][1], 4)}f, {round(minecraft_matrix[3][2], 4)}f, {round(minecraft_matrix[3][3], 4)}f]"
                 )
-                block_string = f'{{id: "minecraft:block_display", block_state: {{Name: "minecraft:{obj.mcbde.block_type}", Properties: {{}}}},' \
+                block_type = obj.mcbde.block_type
+                variant = obj.mcbde.block_variant.replace("=", ":")
+                block_string = f'{{id: "minecraft:block_display", block_state: {{Name: "minecraft:{block_type}", Properties: {{{variant}}}}},' \
                             + transformation_string + '},'
                 command_string = command_string + block_string
 
+        # trim the last comma and close the brackets
         command_string = command_string[:-1] + ']}'
         print(command_string)
+        context.scene.mcbde.command = command_string
+
         return {'FINISHED'}
 
 

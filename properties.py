@@ -1,6 +1,5 @@
 from bpy.types import PropertyGroup, PropertyGroup, Scene, Object
 from bpy.props import (
-    EnumProperty,
     StringProperty,
     PointerProperty,
 )
@@ -38,7 +37,9 @@ class McbdeBlockProperties(PropertyGroup):
 
     def get_block_list(self, context, edit_text):
         return [item[0] for item in block_definitions.blocks]
-
+    
+    def get_variants(self, context, edit_text):
+        return []
 
     block_type: StringProperty(
         name="Block Type",
@@ -46,6 +47,13 @@ class McbdeBlockProperties(PropertyGroup):
         description="The type of Minecraft block associated with this mesh",
         update=change_block_type,
         search=get_block_list
+    )
+    block_variant: StringProperty(
+        name="Block Variant",
+        default="{}",
+        description="The variations associated with the Minecraft block",
+        update=change_block_type,
+        search=get_variants
     )
 
 
@@ -63,10 +71,6 @@ def register():
 
     Object.mcbde = PointerProperty(type=McbdeBlockProperties)
     Scene.mcbde = PointerProperty(type=McbdeMenuProperties)
-
-    #populate_block_collection()
-
-    print("set object and scene mcbde")
 
 
 def unregister():

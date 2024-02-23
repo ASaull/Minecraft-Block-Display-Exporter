@@ -21,6 +21,7 @@ class McbdePanel(Panel):
 
         if active_object and active_object.type == 'MESH' and active_object.mcbde:
             col.prop(active_object.mcbde, "block_type")
+            col.prop(active_object.mcbde, "block_variant")
         else:
             layout.label(text="Select a mesh object with MCBDE properties.")
 
@@ -33,7 +34,7 @@ class McbdePanel(Panel):
         col = layout.column()
 
         col.operator("object.generate_button")
-        col.prop(context.scene.mcbde, "command")
+        layout.prop(context.scene.mcbde, "command")
 
 
 classes = (
