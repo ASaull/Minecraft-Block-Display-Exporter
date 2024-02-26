@@ -1,4 +1,5 @@
 from bpy.types import Panel, Object
+from .data_loader import data_loader
 
 class McbdePanel(Panel):
     """
@@ -14,6 +15,13 @@ class McbdePanel(Panel):
     def draw(self, context):
         layout = self.layout
         active_object = context.active_object
+
+        # Data section
+        layout.label(text="Minecraft Data:")
+        layout.operator("object.load_data_button")
+
+        if not data_loader.is_initialized():
+            return
 
         # Selection section
         layout.label(text="Selection:")

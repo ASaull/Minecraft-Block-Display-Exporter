@@ -4,16 +4,7 @@ from bpy.props import (
     PointerProperty,
 )
 from . import block_definitions
-        
-
-def change_block_type(self, context):
-    """
-    Change the block type for selected objects.
-    """
-    print(self["block_type"])
-    for obj in context.selected_objects:
-        obj.mcbde["block_type"] = self["block_type"]
-    print("Changing material for " + context.active_object.name + " to " + self.block_type)
+from . import properties_util
 
 
 class McbdeMenuProperties(PropertyGroup):
@@ -45,14 +36,14 @@ class McbdeBlockProperties(PropertyGroup):
         name="Block Type",
         default="stone",
         description="The type of Minecraft block associated with this mesh",
-        update=change_block_type,
+        update=properties_util.change_block_type,
         search=get_block_list
     )
     block_variant: StringProperty(
         name="Block Variant",
         default="{}",
         description="The variations associated with the Minecraft block",
-        update=change_block_type,
+        update=properties_util.change_block_type,
         search=get_variants
     )
 

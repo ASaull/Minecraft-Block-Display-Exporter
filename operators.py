@@ -2,6 +2,8 @@ import bpy
 from bpy.types import Operator
 import mathutils
 
+from .data_loader import data_loader
+
 
 def origin_to_corner(context):
     old_active = context.active_object
@@ -114,11 +116,25 @@ class OriginToCornerButton(Operator):
         origin_to_corner(context)
         return {'FINISHED'}
     
+class LoadDataButton(Operator):
+    """
+    Opeartor for the loading data button
+    """
+    bl_idname = "object.load_data_button"
+    bl_label = "Load Data"
+    bl_description = "Load the Minecraft data from the specified Minecraft install location"
+
+    def execute(self, context):
+        working_directory = r"C:\Users\saull\Documents\GitHub\MCBDE\Minecraft-Block-Display-Exporter"
+        data_loader.initialize_data(working_directory)
+        return {'FINISHED'}
+    
 
 classes = (
     GenerateButton,
     OriginToCentreButton,
     OriginToCornerButton,
+    LoadDataButton,
 )
 
 def register():
