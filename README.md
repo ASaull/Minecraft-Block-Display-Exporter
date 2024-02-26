@@ -2,5 +2,7 @@
 
 
 ### TODO
- - Allow custom blocks
- - Allow custom properties for blocks ie. [facing=west]
+ - Move changes to multiple files
+ - Support block models for blocks without variants
+ - Allow updating block variant to update model
+ - Support cross shaped plants
