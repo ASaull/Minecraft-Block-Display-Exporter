@@ -24,7 +24,7 @@ class McbdePanel(Panel):
             return
 
         # Selection section
-        layout.label(text="Selection:")
+        layout.label(text="Selected Blocks:")
         col = layout.column()
 
         if active_object and active_object.type == 'MESH' and active_object.mcbde:

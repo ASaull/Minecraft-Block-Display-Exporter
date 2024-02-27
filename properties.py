@@ -5,6 +5,7 @@ from bpy.props import (
 )
 from . import block_definitions
 from . import properties_util
+from .data_loader import data_loader
 
 
 class McbdeMenuProperties(PropertyGroup):
@@ -30,20 +31,21 @@ class McbdeBlockProperties(PropertyGroup):
         return [item[0] for item in block_definitions.blocks]
     
     def get_variants(self, context, edit_text):
-        return []
+        blockstate = data_loader.get_data("blockstates", self.block_type)
+        return blockstate["variants"]
 
     block_type: StringProperty(
-        name="Block Type",
-        default="stone",
+        name="Type",
+        default="",
         description="The type of Minecraft block associated with this mesh",
         update=properties_util.change_block_type,
         search=get_block_list
     )
     block_variant: StringProperty(
-        name="Block Variant",
+        name="Variant",
         default="{}",
         description="The variations associated with the Minecraft block",
-        update=properties_util.change_block_type,
+        update=properties_util.change_block_variant,
         search=get_variants
     )
 
