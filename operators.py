@@ -54,7 +54,8 @@ class GenerateButton(Operator):
         #origin_to_corner(context)
 
         # Default origin location is offset to the top north west corner of a command block at 0, 0, 0
-        origin_offset = Vector((-0.5, 0.5, -0.5))
+        # Note that this offset is in Blender's coordinate system
+        origin_offset = Vector((-0.5, 0.5, 0.5))
         origin_location = Vector((0, 0, 0))
 
         # Looking for origin command block object to update origin location
@@ -65,13 +66,14 @@ class GenerateButton(Operator):
                     break
                 
         final_origin_location = origin_location + origin_offset
+        print("FINAL ORIGIN LOCATION", final_origin_location)
         origin_text = f"~{round(final_origin_location[0], 4)} ~{round(final_origin_location[2], 4)} ~{round(-final_origin_location[1], 4)}"
                 
         command_string = "/summon block_display " + origin_text + " {Passengers: ["
 
         # Getting the string for each block (Passenger) in the command
         for obj in bpy.context.scene.objects:
-            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type != "" and obj.mcbde.block_type != "origin_command_block":
+            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type not in ["", "origin_command_block", "child_display_block"]:
                 blender_matrix = obj.matrix_world.copy()
                 minecraft_matrix = convert_coordinates(blender_matrix)
                 transformation_string = (
@@ -81,9 +83,15 @@ class GenerateButton(Operator):
                                      f"{round(minecraft_matrix[3][0], 4)}f, {round(minecraft_matrix[3][1], 4)}f, {round(minecraft_matrix[3][2], 4)}f, {round(minecraft_matrix[3][3], 4)}f]"
                 )
                 block_type = obj.mcbde.block_type
-                variant_pairs = obj.mcbde.block_variant.split(',')
-                formatted_variant_pairs = [f'{key}:"{value}"' for key, value in (pair.split('=') for pair in variant_pairs)]
-                variant = ','.join(formatted_variant_pairs)
+
+                # Checking if we have a variant set
+                if obj.mcbde.block_variant:
+                    variant_pairs = obj.mcbde.block_variant.split(',')
+                    formatted_variant_pairs = [f'{key}:"{value}"' for key, value in (pair.split('=') for pair in variant_pairs)]
+                    variant = ','.join(formatted_variant_pairs)
+                else:
+                    variant = ""
+
                 block_string = f'{{id: "minecraft:block_display", block_state: {{Name: "minecraft:{block_type}", Properties: {{{variant}}}}},' \
                             + transformation_string + '},'
                 command_string = command_string + block_string

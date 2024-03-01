@@ -1,11 +1,13 @@
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from math import radians
 import logging
+import bmesh
 
 from .data_loader import data_loader
 from .utils import deselect_all_except, reselect
 
+logger = logging.getLogger(__name__)
 
 """
 Sets the origin of obj to an exact world location
@@ -99,14 +101,14 @@ def change_block_type(self, context):
 
     # First get the default variant for this block type
     blockstate = data_loader.get_data("blockstates", block_type)
-    logging.debug("BLOCKSTATE:", blockstate)
+    print("BLOCKSTATE:", blockstate)
 
     if blockstate["variants"]:  # this is an object that uses variants
         variant_data = blockstate["variants"]
         # The first key will be the default variation for the block
         selected_variant = next(iter(variant_data))
     else:
-        logging.debug("not a valid object - for now")
+        print("not a valid object - for now")
 
     # Then we update the block properties and visuals of all selected blocks
     for obj in context.selected_objects:
@@ -137,8 +139,7 @@ def change_block_variant(self, context):
     tmp_active = context.active_object
 
     blockstate = data_loader.get_data("blockstates", block_type)
-    logging.debug("BLOCKSTATE:", blockstate)
-
+    print("BLOCKSTATE:", blockstate)
 
     # TODO We must account for non-variant style blocks (fences)
     variant_data = blockstate["variants"]
@@ -157,63 +158,88 @@ def change_block_variant(self, context):
 
 
 def change_block_visuals(obj, variant_data):
-    object_origin_to_corner(obj)
+    #object_origin_to_corner(obj)
+
     # Block scale must equal dimensions to be used with this addon
-    if not obj.scale == obj.dimensions:
-        current_dimensions = Vector(obj.dimensions)
-        obj.dimensions = Vector((1, 1, 1))
-        prev = deselect_all_except(obj)
-        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        reselect(prev)
-        print("current_d", current_dimensions)
-        obj.scale = current_dimensions
-        print("scale", obj.scale)
+    # if not obj.scale == obj.dimensions:
+    #     current_dimensions = Vector(obj.dimensions)
+    #     obj.dimensions = Vector((1, 1, 1))
+    #     prev = deselect_all_except(obj)
+    #     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    #     reselect(prev)
+    #     print("current_d", current_dimensions)
+    #     obj.scale = current_dimensions
+    #     print("scale", obj.scale)
 
     # Setting the object to wireframe so we can see the visual
-    obj.display_type = 'BOUNDS'
+    # obj.display_type = ''
 
     # Removing previous block visuals
-    for child in obj.children:
-        bpy.data.objects.remove(child, do_unlink=True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    mesh = bpy.context.edit_object.data
+    bm = bmesh.from_edit_mesh(mesh)
+    bmesh.ops.delete(bm, geom=bm.verts, context='VERTS')
+    bmesh.update_edit_mesh(mesh)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     # Now we have a variant, find the model
     selected_variant_data = variant_data[obj.mcbde.block_variant]
-    logging.debug("VARIANT DATA: ", selected_variant_data)
+    print("VARIANT DATA: ", selected_variant_data)
     if isinstance(selected_variant_data, list): # This happens when there are random variations. We just pick the first
         selected_variant_data = selected_variant_data[0]
         
-    model_rotation = Vector((
-        radians( selected_variant_data.get('x', 0)),
-        radians( selected_variant_data.get('z', 0)),
-        radians(-selected_variant_data.get('y', 0))
-    ))
+    # model_rotation = Vector((
+    #     radians( selected_variant_data.get('x', 0)),
+    #     radians( selected_variant_data.get('z', 0)),
+    #     radians(-selected_variant_data.get('y', 0))
+    # ))
+    # We get the model rotation from the variant data
+    rotation_matrix_x = Matrix.Rotation(radians( selected_variant_data.get('x', 0)), 4, 'X')
+    rotation_matrix_y = Matrix.Rotation(radians( selected_variant_data.get('z', 0)), 4, 'Y')
+    rotation_matrix_z = Matrix.Rotation(radians(-selected_variant_data.get('y', 0)), 4, 'Z')
+
+    model_rotation = rotation_matrix_x @ rotation_matrix_y @ rotation_matrix_z
+
 
     model_name = selected_variant_data["model"].split('/')[-1]
     model_data = data_loader.get_data("block_models", model_name)
-    logging.debug("MODEL NAME:", model_name)
-    logging.debug("MODEL DATA:", model_data)
+    print("MODEL NAME:", model_name)
+    print("MODEL DATA 1:", model_data)
 
-    while "parent" in model_data.keys() and model_data["parent"] != "block/block": # We do not need gui data from block/block
+    # While this model data has a valid parent, we combine it with its parent
+    while "parent" in model_data.keys() and model_data["parent"] != "block/block":
+        # We do not need gui data from block/block
         parent_name = model_data["parent"].split("/")[-1]
         parent_data = data_loader.get_data("block_models", parent_name)
         del model_data["parent"]
 
         for key in parent_data.keys():
-            if key == "textures" and "textures" in model_data:  # Special case for textures where we update variables
+            if key == "textures" and "textures" in model_data:
+                # Special case for textures where we gather texture data into one dict
                 tmp_textures = parent_data["textures"]
-                logging.debug("TEMP TEXTURES:", tmp_textures)
+                print("TEMP TEXTURES:", tmp_textures)
+
                 for texture_name in tmp_textures:
-                    logging.debug("TEXTURE NAME:", texture_name)
+                    print("TEXTURE NAME:", texture_name)
                     texture_value = tmp_textures[texture_name]
-                    tmp_textures[texture_name] = model_data["textures"].get(texture_value.strip('#'))
+
+                    # If this texture is a reference to another texture, we go find that other texture.
+                    if '#' in texture_value:
+                        tmp_textures[texture_name] = model_data["textures"].get(texture_value.strip('#'))
+                    else:
+                        tmp_textures[texture_name] = texture_value
+
                 for texture_name in model_data["textures"]:
                     if texture_name not in tmp_textures:
                         tmp_textures[texture_name] = model_data["textures"][texture_name]
+
                 model_data[key] = tmp_textures
-            elif key != "display":  # Otherwise, we just put the parent non-display data into the model data
+
+            elif key != "display":
+                # Otherwise, we just put the parent non-display data into the model data
                 model_data[key] = parent_data[key]
         
-    logging.debug("MODEL DATA:", model_data)
+    print("MODEL DATA 2:", model_data)
 
     # Now we have complete elements data, and texture data.
     # So we sub the textures into the elements data.
@@ -227,50 +253,47 @@ def change_block_visuals(obj, variant_data):
 
     convert_elements_coordinates(elements)
 
-    logging.debug("ELEMENTS:", elements)
+    print("ELEMENTS:", elements)
 
     ######################################
     ### CREATE THE MODEL FROM ELEMENTS ###
     ######################################
 
+    # We need to be in edit mode to add meshes
+    bpy.ops.object.mode_set(mode='EDIT')
+
     for element in elements:
-        bpy.ops.mesh.primitive_cube_add(size=1)
-        inner_object = bpy.context.active_object
-        object_origin_to_corner(inner_object)
-        
-        # Creating the unscaled mesh at the centre of the world
-        inner_object.scale.x = abs((element["to"].x - element["from"].x))
-        inner_object.scale.y = abs((element["to"].y - element["from"].y))
-        inner_object.scale.z = abs((element["to"].z - element["from"].z))
-        inner_object.location = element["from"]
-        
-        # Now we have to rotate to match the variant rotation
-        logging.debug("MODEL ROTATION: ", model_rotation)
-        origin_to_location(inner_object, Vector((0.5, -0.5, 0.5)))
-        inner_object.rotation_euler = model_rotation
-        
-        # Applying scale
-        bpy.context.view_layer.objects.active = inner_object
-        inner_object.select_set(True)
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        inner_object.select_set(False)
 
-        # Parent the inner object to the outer cube
-        inner_object.parent = obj
-        inner_object.matrix_parent_inverse = obj.matrix_world.inverted()
+        mesh = bpy.context.edit_object.data
+        bm = bmesh.from_edit_mesh(mesh)
+
+        from_vector = element["from"]
+        to_vector = element["to"]
+
+        verts = [
+            bm.verts.new(from_vector),
+            bm.verts.new(Vector((to_vector.x, from_vector.y, from_vector.z))),
+            bm.verts.new(Vector((to_vector.x, to_vector.y, from_vector.z))),
+            bm.verts.new(Vector((from_vector.x, to_vector.y, from_vector.z))),
+            bm.verts.new(to_vector),
+            bm.verts.new(Vector((from_vector.x, to_vector.y, to_vector.z))),
+            bm.verts.new(Vector((from_vector.x, from_vector.y, to_vector.z))),
+            bm.verts.new(Vector((to_vector.x, from_vector.y, to_vector.z))),
+        ]
+
+        faces = [
+            bm.faces.new((verts[0], verts[1], verts[2], verts[3])),
+            bm.faces.new((verts[4], verts[5], verts[6], verts[7])),
+            bm.faces.new((verts[0], verts[3], verts[5], verts[6])),
+            bm.faces.new((verts[1], verts[2], verts[4], verts[7])),
+            bm.faces.new((verts[2], verts[3], verts[5], verts[4])),
+            bm.faces.new((verts[0], verts[1], verts[7], verts[6])),
+        ]
+
+        # Rotate the cube
+        bmesh.ops.rotate(bm, verts=verts, cent=(0.5, -0.5, 0), matrix=model_rotation)
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+
         
-        # Translating that mesh to the location, rotation, and scale of its parent
-        inner_object.location = inner_object.parent.location
-        inner_object.scale = inner_object.parent.scale
-        inner_object.rotation_euler = inner_object.parent.rotation_euler
-
-        # Set inner object as non-interactable, and remove its block type
-        inner_object.hide_select = True
-        inner_object.mcbde["block_type"] = ""
-
-        # Set the parent back to being the active object
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-
     #########################################################################################
