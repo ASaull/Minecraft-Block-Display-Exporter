@@ -134,14 +134,23 @@ def create_materials(obj, textures):
 
             material = bpy.data.materials.new(name=material_name)
             material.use_nodes = True
+            material.blend_method = 'CLIP'
+            material.use_backface_culling = True
 
             bsdf_node = material.node_tree.nodes["Principled BSDF"]
+            output_node = material.node_tree.nodes["Material Output"]
+            transparent_node = material.node_tree.nodes.new("ShaderNodeBsdfTransparent")
+            mix_node = material.node_tree.nodes.new("ShaderNodeMixShader")
 
             tex_node = material.node_tree.nodes.new('ShaderNodeTexImage')
             tex_node.image = image
             tex_node.interpolation = "Closest"
 
             material.node_tree.links.new(tex_node.outputs[0], bsdf_node.inputs[0])
+            material.node_tree.links.new(tex_node.outputs[1], mix_node.inputs[0])
+            material.node_tree.links.new(transparent_node.outputs[0], mix_node.inputs[1])
+            material.node_tree.links.new(bsdf_node.outputs[0], mix_node.inputs[2])
+            material.node_tree.links.new(mix_node.outputs[0], output_node.inputs[0])
         else:
             # Material already exists
             print("material already exists")
@@ -406,8 +415,6 @@ def change_block_visuals(obj, variant_data):
             update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
         if "up" in element["faces"]:
             face = bm.faces.new((verts[5], verts[7], verts[3], verts[1]))
-
-            print("UP TEXTURE", face_data["texture"])
             
             face_data = element["faces"]["up"]
             material_index = materials.index(obj.data.materials[face_data["texture"]])
