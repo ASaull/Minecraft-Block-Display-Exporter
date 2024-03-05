@@ -74,7 +74,7 @@ class DataLoader:
         with zipfile.ZipFile(self.minecraft_location, 'r') as jar:
             all_files = jar.namelist()
 
-            split_name = name.replace('minecraft:', '').split('/')
+            split_name = name.split('/')
             target_directory = split_name[0]
             target_basename = split_name[1]
             directory_path = self.textures_path + "/" + target_directory

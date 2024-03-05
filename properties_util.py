@@ -67,9 +67,10 @@ def replace_textures(d, textures):
         for i, item in enumerate(d):
             d[i] = replace_textures(item, textures)
     elif isinstance(d, str) and d.startswith("#") and d[1:] in textures:
-        return textures[d[1:]]
+        print("replacing", d, "with", textures[d[1:]].replace("minecraft:", ""))
+        return textures[d[1:]].replace("minecraft:", "")
     elif isinstance(d, str) and d.startswith("#") and d[1:] == "texture": # I have no idea why this case exists
-        return textures["particle"]
+        return textures["particle"].replace("minecraft:", "")
     return d
 
 def convert_vector_coordinates(minecraft_vector):
@@ -336,6 +337,15 @@ def change_block_visuals(obj, variant_data):
 
     # Replacing '#' variables in data with the correct values
     replace_textures(model_data["elements"], model_data["textures"])
+
+    # Some textures have "minecraft:" in them, others do not, we make this
+    # consistent
+    for texture_name in model_data["textures"]:
+        print("tex was", model_data["textures"][texture_name])
+        model_data["textures"][texture_name] = model_data["textures"][texture_name].replace("minecraft:", "")
+        print("tex is", model_data["textures"][texture_name])
+
+    print("MODEL DATA 3:", model_data)
 
     # We can now update the materials we need for out object
     materials = create_materials(obj, model_data["textures"])
