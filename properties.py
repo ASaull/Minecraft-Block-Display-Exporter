@@ -17,8 +17,14 @@ class McbdeMenuProperties(PropertyGroup):
         name="Command",
         description="Copy this into your Command Block in Minecraft",
         default="",
-        maxlen=2048,
+        maxlen=0,
         options={'HIDDEN', 'SKIP_SAVE'}
+    )
+    minecraft_location: StringProperty(
+        name="Minecraft Location",
+        description='The .jar file for the desired Minecraft version. Will be found in ".minecraft/versions/VERSION/VERSION.jar"',
+        default="",
+        subtype = 'FILE_PATH'
     )
 
 

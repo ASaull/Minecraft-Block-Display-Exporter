@@ -142,8 +142,8 @@ class LoadDataButton(Operator):
     bl_description = "Load the Minecraft data from the specified Minecraft install location"
 
     def execute(self, context):
-        working_directory = r"C:\Users\saull\Documents\GitHub\MCBDE\Minecraft-Block-Display-Exporter"
-        data_loader.initialize_data(working_directory)
+        minecraft_location = context.scene.mcbde["minecraft_location"]
+        data_loader.initialize_data(minecraft_location)
         return {'FINISHED'}
     
 
