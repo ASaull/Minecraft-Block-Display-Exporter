@@ -152,31 +152,42 @@ def create_materials(obj, textures):
     return materials
 
 
-def update_face_material(face, material_index, bm):
+def update_face_material(face, material_index, bm, uv):
     """
     This will apply the specified material to the specified face
-    with correct uv data
+
+    Note that Blender uvs start from the bottom left, while
+    Minecraft uvs start from the top left
+    
+    uv is [x1, y1, x2, y2]
     """
     uv_layer = bm.loops.layers.uv.active
 
     face.material_index = material_index
 
     loop_data = face.loops
+
+    print("UV:", uv)
+
+    # bottom left
     uv_data = loop_data[0][uv_layer].uv
-    uv_data.x = 1.0
-    uv_data.y = 0.0
+    uv_data.x = uv[0]/16 #x1
+    uv_data.y = 1 - uv[3]/16 #1 - y2
 
+    # bottom right
     uv_data = loop_data[1][uv_layer].uv
-    uv_data.x = 1.0
-    uv_data.y = 1.0
+    uv_data.x = uv[2]/16 #x2
+    uv_data.y = 1 - uv[3]/16 #1 - y2
 
+    # top right
     uv_data = loop_data[2][uv_layer].uv
-    uv_data.x = 0.0
-    uv_data.y = 1.0
+    uv_data.x = uv[2]/16 #x2
+    uv_data.y = 1 - uv[1]/16 #1 - y1
 
+    # top left
     uv_data = loop_data[3][uv_layer].uv
-    uv_data.x = 0.0
-    uv_data.y = 0.0
+    uv_data.x = uv[0]/16 #x1
+    uv_data.y = 1 - uv[1]/16 #1 - y1
 
 
 def change_block_type(self, context):
@@ -287,6 +298,9 @@ def change_block_visuals(obj, variant_data):
     bmesh.update_edit_mesh(mesh)
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    # Removing materials
+    obj.data.materials.clear()
+
     # We get the model rotation from the variant data
     rotation_matrix_x = Matrix.Rotation(radians( selected_variant_data.get('x', 0)), 4, 'X')
     rotation_matrix_y = Matrix.Rotation(radians( selected_variant_data.get('z', 0)), 4, 'Y')
@@ -341,9 +355,7 @@ def change_block_visuals(obj, variant_data):
     # Some textures have "minecraft:" in them, others do not, we make this
     # consistent
     for texture_name in model_data["textures"]:
-        print("tex was", model_data["textures"][texture_name])
         model_data["textures"][texture_name] = model_data["textures"][texture_name].replace("minecraft:", "")
-        print("tex is", model_data["textures"][texture_name])
 
     print("MODEL DATA 3:", model_data)
 
@@ -374,46 +386,56 @@ def change_block_visuals(obj, variant_data):
         # This constructs a rectangular prism from "from_vector" to "to_vector"
         verts = [
             bm.verts.new(from_vector),
-            bm.verts.new(Vector((to_vector.x, from_vector.y, from_vector.z))),
-            bm.verts.new(Vector((to_vector.x, to_vector.y, from_vector.z))),
-            bm.verts.new(Vector((from_vector.x, to_vector.y, from_vector.z))),
-            bm.verts.new(to_vector),
-            bm.verts.new(Vector((from_vector.x, to_vector.y, to_vector.z))),
             bm.verts.new(Vector((from_vector.x, from_vector.y, to_vector.z))),
+            bm.verts.new(Vector((to_vector.x, from_vector.y, from_vector.z))),
             bm.verts.new(Vector((to_vector.x, from_vector.y, to_vector.z))),
+            bm.verts.new(Vector((from_vector.x, to_vector.y, from_vector.z))),
+            bm.verts.new(Vector((from_vector.x, to_vector.y, to_vector.z))),
+            bm.verts.new(Vector((to_vector.x, to_vector.y, from_vector.z))),
+            bm.verts.new(to_vector),
         ]
+
+        default_uv = [0, 0, 16, 16]
 
         # Fill in correct faces if they are present
         if "down" in element["faces"]:
-            face = bm.faces.new((verts[0], verts[1], verts[2], verts[3]))
+            face = bm.faces.new((verts[0], verts[2], verts[6], verts[4]))
             
-            material_index = materials.index(obj.data.materials[element["faces"]["down"]["texture"]])
-            update_face_material(face, material_index, bm)
+            face_data = element["faces"]["down"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
         if "up" in element["faces"]:
-            face = bm.faces.new((verts[4], verts[5], verts[6], verts[7]))
-            
-            material_index = materials.index(obj.data.materials[element["faces"]["up"]["texture"]])
-            update_face_material(face, material_index, bm)
-        if "west" in element["faces"]:
-            face = bm.faces.new((verts[0], verts[3], verts[5], verts[6]))
-            
-            material_index = materials.index(obj.data.materials[element["faces"]["west"]["texture"]])
-            update_face_material(face, material_index, bm)
-        if "east" in element["faces"]:
-            face = bm.faces.new((verts[1], verts[2], verts[4], verts[7]))
-            
-            material_index = materials.index(obj.data.materials[element["faces"]["east"]["texture"]])
-            update_face_material(face, material_index, bm)
-        if "south" in element["faces"]:
-            face = bm.faces.new((verts[2], verts[3], verts[5], verts[4]))
-            
-            material_index = materials.index(obj.data.materials[element["faces"]["south"]["texture"]])
-            update_face_material(face, material_index, bm)
-        if "north" in element["faces"]:
-            face = bm.faces.new((verts[0], verts[1], verts[7], verts[6]))
+            face = bm.faces.new((verts[5], verts[7], verts[3], verts[1]))
 
-            material_index = materials.index(obj.data.materials[element["faces"]["north"]["texture"]])
-            update_face_material(face, material_index, bm)
+            print("UP TEXTURE", face_data["texture"])
+            
+            face_data = element["faces"]["up"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "west" in element["faces"]:
+            face = bm.faces.new((verts[0], verts[4], verts[5], verts[1]))
+            
+            face_data = element["faces"]["west"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "east" in element["faces"]:
+            face = bm.faces.new((verts[6], verts[2], verts[3], verts[7]))
+            
+            face_data = element["faces"]["east"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "south" in element["faces"]:
+            face = bm.faces.new((verts[4], verts[6], verts[7], verts[5]))
+            
+            face_data = element["faces"]["south"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "north" in element["faces"]:
+            face = bm.faces.new((verts[2], verts[0], verts[1], verts[3]))
+
+            face_data = element["faces"]["north"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
 
         # Element rotation, rotation may be defined for a single element
         if "rotation" in element:
