@@ -145,7 +145,7 @@ class LoadDataButton(Operator):
         minecraft_location = context.scene.mcbde["minecraft_location"]
         data_loader.initialize_data(minecraft_location)
         return {'FINISHED'}
-    
+
 
 classes = (
     GenerateButton,

@@ -34,10 +34,6 @@ class McbdePanel(Panel):
         else:
             layout.label(text="Select a mesh object with MCBDE properties.")
 
-        #row = layout.row(align=True)
-        #row.operator("object.origin_to_centre_button")
-        #row.operator("object.origin_to_corner_button")
-
         # Generation section
         layout.label(text="Generation:")
         col = layout.column()
