@@ -4,7 +4,6 @@ from math import radians
 import logging
 import bmesh
 import copy
-import json
 
 from .data_loader import data_loader
 from .utils import deselect_all_except, reselect
@@ -12,9 +11,54 @@ from .utils import deselect_all_except, reselect
 logger = logging.getLogger(__name__)
 
 
+def origin_to_location(obj, location):
+    """
+    Sets the origin of obj to an exact world location
+    """
+    old_active = bpy.context.active_object
+    old_cursor_location = Vector(bpy.context.scene.cursor.location)
+    old_cursor_mode = bpy.context.scene.tool_settings.transform_pivot_point
+    tmp_selected = bpy.context.selected_objects
+    
+    obj.select_set(True)
+    
+    # Set the 3D cursor to the desired location
+    bpy.context.scene.cursor.location = location
+    bpy.context.scene.tool_settings.transform_pivot_point = 'CURSOR'
+
+    # Set the object's origin to the 3D cursor location
+    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+    
+    # Revert cursor location
+    bpy.context.view_layer.objects.active = old_active
+    bpy.context.scene.cursor.location = old_cursor_location
+    bpy.context.scene.tool_settings.transform_pivot_point = old_cursor_mode
+    
+    obj.select_set(False)
+
+    for obj in tmp_selected:
+        obj.select_set(True)
+
+
+def object_origin_to_corner(obj):
+    """
+    Set the origin of a single object to its Minecraft origin corner
+    """
+    old_cursor_location = Vector(bpy.context.scene.cursor.location)
+    
+    obj.select_set(True)
+    # Vertex 2 corresponds to the origin of a Minecraft block in Minecraft
+    bottom_left_location = obj.matrix_world @ obj.data.vertices[2].co
+    bpy.context.scene.cursor.location = bottom_left_location
+    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+    obj.select_set(False)
+
+    bpy.context.scene.cursor.location = old_cursor_location
+
+
 def replace_textures(d, textures):
     """
-    Replace all instances of a # variable in d (#east for example) with the corresponding texture in textures
+    Replaces all instances of a # variable in d (#east for example) with the corresponding texture in textures
     """
     if isinstance(d, dict):
         for key, value in d.items():
@@ -30,7 +74,7 @@ def replace_textures(d, textures):
 
 def convert_vector_coordinates(minecraft_vector):
     """
-    Convert a list in the Minecraft format [x, y, z] to a Blender Vector
+    Converts a list in the Minecraft format [x, y, z] to a Blender Vector
     """
     blender_vector = Vector((0, 0, 0))
     # Blender X from Minecraft X
@@ -44,7 +88,7 @@ def convert_vector_coordinates(minecraft_vector):
 
 def convert_elements_coordinates(elements):
     """
-    Convert all coordinates in elements from Minecraft to Blender.
+    Converts all coordinates in elements from Minecraft to Blender.
     Note that entries in the vector are floats so will not be perfectly precise.
     """
     for element in elements:
@@ -54,7 +98,7 @@ def convert_elements_coordinates(elements):
 
 def convert_element_rotation(rotation_dict):
     """
-    Convert the Minecraft element rotations to rotation matrices that can
+    Converts the Minecraft element rotations to rotation matrices that can
     be directly applied by Blender
     """
     if rotation_dict["axis"] == 'x':
@@ -73,11 +117,7 @@ def convert_element_rotation(rotation_dict):
     return element_rotation_matrix, cent
 
 
-def create_materials(textures):
-    """
-    Create one material for each of the supplied textures if they
-    do not already exist.
-    """
+def create_materials(obj, textures):
     materials = []
     for texture in textures:
         material_name = textures[texture]
@@ -120,12 +160,12 @@ def create_materials(textures):
 
 def update_face_material(face, material_index, bm, uv):
     """
-    Apply the specified material to the specified face
+    This will apply the specified material to the specified face
 
     Note that Blender uvs start from the bottom left, while
     Minecraft uvs start from the top left
     
-    uv format is [x1, y1, x2, y2]
+    uv is [x1, y1, x2, y2]
     """
     uv_layer = bm.loops.layers.uv.active
 
@@ -159,11 +199,22 @@ def update_face_material(face, material_index, bm, uv):
 
 def build_properties_dict(blockstate):
     """
-    Build a dict that stores the full set of possible block properties
-    for a given blockstate.
+    This builds a dict that stores the full set of possible block properties
+    for a given blockstate. Note that Blender does not support sets in
+    object data, so we must use lists.
+    
+    The possible values for each property are created as a tuple in
+    the Blender enum format with an identifier, display name, and description.
+    We do this instead of directly creating Blender enums because Blender
+    enums are immutable and we need to build this step-by-step
 
     Example return value:
-    {'facing': ['north', 'east', 'west', 'south']}
+    {'facing': [
+        ('north', 'north', 'Set "facing" property to "north"'),
+        ('east', 'east', 'Set "facing" property to "east"'),
+        ('west', 'west', 'Set "facing" property to "west"'),
+        ('south', 'south', 'Set "facing" property to "south"')
+    ]}
     """
     dict = {}
 
@@ -173,10 +224,11 @@ def build_properties_dict(blockstate):
                 # In this case, there must be exactly one variant, and it is blank
                 return {}
             for key, value in [key_value.split("=") for key_value in variant.split(",")]:
+                property_tuple = (value, value, f'Set "{variant}" property to "{value}"')
                 if key not in dict: 
-                    dict[key] = [value]
-                elif value not in dict[key]:
-                    dict[key].append(value)
+                    dict[key] = [property_tuple]
+                elif property_tuple not in dict[key]:
+                    dict[key].append(property_tuple)
     
     elif "multipart" in blockstate:
         pass
@@ -187,58 +239,51 @@ def build_properties_dict(blockstate):
     return dict
 
 
-def get_default_properties(block_properties):
+def build_properties_enums(block_properties):
     """
-    Return the default (first) properties in block_properties as a dict
-    
-    Example return value:
-    {'facing': 'north'}
+    This builds a dict of property enums where each key is the name of
+    the property and each value is a Blender enum containing possible
+    values for that property.
     """
-    selected = {}
-
+    dict = {}
     for property in block_properties:
-        selected[property] = block_properties[property][0]
+        items = block_properties[property]
+        enum = bpy.props.EnumProperty(
+            items=items,
+            name=property,
+            description=f"The {property} property of the selected block",
+            default=items[0][0]
+        )
+        dict[property] = enum
+    return dict
 
-    return selected
 
-def get_selected_properties(obj):
+def get_outer_model_data(blockstate, block_properties_enums):
     """
-    Return the properties which have been selected in obj as a dict
-    
-    Example return value:
-    {'facing': 'north'}
-    """
-    selected = {}
-
-    for property in obj.mcbde.block_properties:
-        selected[property.name] = property.value
-    
-    return selected
-
-
-def get_outer_model_data(blockstate, selected_block_properties):
-    """
-    Return the model json corresponding to the
-    selected block properties as defined in blockstate.
+    This will return the model json corresponding to the
+    selected block properties in the block properties enum
+    as defined in blockstate.
     """
     if "variants" in blockstate:
         variant_string = ""
-        for property, value in selected_block_properties.items():
-            variant_string = variant_string + property + "=" + value + ","
+        for property, enum in block_properties_enums.items():
+            variant_string = variant_string + property + "=" + enum["default"] + ","
         variant_string = variant_string[:-1]
         for variant in blockstate["variants"]:
             if variant == variant_string:
                 return blockstate["variants"][variant]
+        print("Invalid variant. This should not be possible.")
         return None
 
 
 def build_model(obj, outer_model_data, model_data):
     """
-    Add the transformed cubes from the elements of model_data
+    Adds the transformed cubes from the elements of model_data
     to the mesh data in obj.
 
     outer_model_data contains the rotation.
     """
+
     # Identity matrix, no rotation by default
     model_rotation = Matrix.Rotation(0, 4, 'X')
 
@@ -285,6 +330,8 @@ def build_model(obj, outer_model_data, model_data):
             elif key != "display":
                 model_data[key] = parent_data[key]
 
+    # Now we have complete elements data, and texture data
+
     # If there is no model (air) we return
     if "elements" not in model_data.keys():
         return
@@ -298,7 +345,7 @@ def build_model(obj, outer_model_data, model_data):
         model_data["textures"][texture_name] = model_data["textures"][texture_name].replace("minecraft:", "")
 
     # We can now update the materials we need for out object
-    materials = create_materials(model_data["textures"])
+    materials = create_materials(obj, model_data["textures"])
     for material in materials:
         if material.name not in [m.name for m in obj.data.materials]:
             obj.data.materials.append(material)
@@ -334,22 +381,42 @@ def build_model(obj, outer_model_data, model_data):
         default_uv = [0, 0, 16, 16]
 
         # Fill in correct faces if they are present
-        face_vertex_mapping = {
-            "down":  (0, 2, 6, 4),
-            "up":    (5, 7, 3, 1),
-            "west":  (0, 4, 5, 1),
-            "east":  (6, 2, 3, 7),
-            "south": (4, 6, 7, 5),
-            "north": (2, 0, 1, 3)
-        }
+        if "down" in element["faces"]:
+            face = bm.faces.new((verts[0], verts[2], verts[6], verts[4]))
+            
+            face_data = element["faces"]["down"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "up" in element["faces"]:
+            face = bm.faces.new((verts[5], verts[7], verts[3], verts[1]))
+            
+            face_data = element["faces"]["up"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "west" in element["faces"]:
+            face = bm.faces.new((verts[0], verts[4], verts[5], verts[1]))
+            
+            face_data = element["faces"]["west"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "east" in element["faces"]:
+            face = bm.faces.new((verts[6], verts[2], verts[3], verts[7]))
+            
+            face_data = element["faces"]["east"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "south" in element["faces"]:
+            face = bm.faces.new((verts[4], verts[6], verts[7], verts[5]))
+            
+            face_data = element["faces"]["south"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+        if "north" in element["faces"]:
+            face = bm.faces.new((verts[2], verts[0], verts[1], verts[3]))
 
-        for face_name, face_vertices in face_vertex_mapping.items():
-            if face_name in element["faces"]:
-                face = bm.faces.new((verts[i] for i in face_vertices))
-                
-                face_data = element["faces"][face_name]
-                material_index = materials.index(obj.data.materials[face_data["texture"]])
-                update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+            face_data = element["faces"]["north"]
+            material_index = materials.index(obj.data.materials[face_data["texture"]])
+            update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
 
         # Element rotation, rotation may be defined for a single element
         if "rotation" in element:
@@ -367,10 +434,10 @@ def build_model(obj, outer_model_data, model_data):
 
 def change_block_type(self, context):
     """
-    Called when block type is changed.
+    Called when block type is changed. In this case, we reset the variant to the
+    default, assuming that the user does not want to preserve the indicated variant.
 
-    Change the model and data of the selected blocks to have the same
-    model and data as the selected block type in the active block.
+    This will fail on incorrect block type
     """
     block_type = copy.deepcopy(self["block_type"])
     tmp_selected = context.selected_objects
@@ -387,21 +454,15 @@ def change_block_type(self, context):
     block_properties = build_properties_dict(blockstate)
 
     # Now we convert that dict into a blender enum
-    selected_block_properties = get_default_properties(block_properties)
+    block_properties_enums = build_properties_enums(block_properties)
 
-    outer_model_data = get_outer_model_data(blockstate, selected_block_properties)
+    outer_model_data = get_outer_model_data(blockstate, block_properties_enums)
 
     # Then we update the block properties and visuals of all selected blocks,
     # starting with the active object
     for obj in [tmp_active] + [o for o in tmp_selected if o != tmp_active]:
         obj.mcbde["block_type"] = block_type
-        obj.mcbde.block_properties.clear()
-
-        for property in block_properties:
-            tmp_block_prop = obj.mcbde.block_properties.add()
-            tmp_block_prop.value_options = json.dumps(block_properties[property])
-            tmp_block_prop.name = property
-            tmp_block_prop.value = selected_block_properties[property]
+        obj.mcbde["block_properties"] = block_properties
 
         change_block_visuals(obj, outer_model_data)
 
@@ -413,34 +474,44 @@ def change_block_type(self, context):
 
 def change_block_variant(self, context):
     """
-    Called when block variant is changed.
-
-    Change the model and data of the selected blocks to have the same
-    model and data as the selected block type in the active block.
+    Called when block variant is changed. In this case, we update block variant for
+    all selected blocks to the user selected block variant, and do not reset to
+    default.
     
     Note that we do not set the block type to be the same as the active block.
     This will, for example, allow the user to set the axis for several different logs.
+
+    This will fail on incorrect block variant.
     """
+    block_type = copy.deepcopy(self["block_type"])
     tmp_selected = context.selected_objects
     tmp_active = context.active_object
-
-    block_type = copy.deepcopy(tmp_active.mcbde.block_type)
 
     # The origin command block will just display as a command block
     if block_type == "origin_command_block":
         block_type = "command_block"
 
     blockstate = data_loader.get_data("blockstates", block_type)
-    
-    selected_block_properties = get_selected_properties(tmp_active)
 
-    outer_model_data = get_outer_model_data(blockstate, selected_block_properties)
+    if blockstate.get("variants", False):  # this is an object that uses variants
+        variant_data = blockstate["variants"]
+        selected_variant = self["block_variant"]
+        # Get the correct variant
+        outer_model_data = variant_data[selected_variant]
 
-    if outer_model_data is None:
+        # If there are random variations we just pick the first
+        if isinstance(outer_model_data, list):
+            outer_model_data = [outer_model_data[0]]
+    elif blockstate.get("multipart", False):   # This is an object that uses multipart
+        pass
+    else:   # This case should not exist
+        print("not a valid object!")
         return
+    
+    # Then we update the block properties and visuals of all selected blocks
+    for obj in tmp_selected:
+        obj.mcbde["block_variant"] = selected_variant
 
-    # Then we update the block visuals of all selected blocks, starting with the active block
-    for obj in [tmp_active] + [o for o in tmp_selected if o != tmp_active]:
         change_block_visuals(obj, outer_model_data)
 
     # Finally, we reset the active and selected objects
@@ -450,15 +521,12 @@ def change_block_variant(self, context):
 
 
 def change_block_visuals(obj, outer_model_data):
-    """
-    Update obj to have the mesh th 
-    """
     variant_name = ""
-    for block_property in obj.mcbde.block_properties:
-        variant_name = variant_name + block_property.name + "=" + block_property.value + ","
+    for key, value in obj.mcbde["selected_block_properties"].items():
+        variant_name = variant_name + key + "=" + value + ","
     mesh_name = obj.mcbde.block_type + "-" + variant_name[:-1]
 
-    # Check if this model has already been created in the scene and reference it
+    # At this point, we check if this model has already been created in the scene and reference it
     # However, if this object is refreshing its own mesh we allow this
     for m in bpy.data.meshes:
         if m.name == mesh_name and m.name != obj.data.name:
@@ -468,7 +536,7 @@ def change_block_visuals(obj, outer_model_data):
     if mesh_name not in [m.name for m in bpy.data.meshes]:
         # If this mesh does not exist, then we will need to create a new mesh
         obj.data = None
-        mesh = bpy.data.meshes.new(name=mesh_name)
+        mesh = bpy.data.meshes.new(name=obj.mcbde.block_type + "-" + obj.mcbde.block_variant)
         obj.data = mesh
     else:
         # If it does exist, we overwrite it
@@ -479,7 +547,9 @@ def change_block_visuals(obj, outer_model_data):
         bmesh.update_edit_mesh(mesh)
         bpy.ops.object.mode_set(mode='OBJECT')
 
+    # Removing materials
     obj.data.materials.clear()
+
 
     model_name = outer_model_data["model"].split('/')[-1]
 

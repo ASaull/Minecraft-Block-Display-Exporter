@@ -5,41 +5,24 @@ from mathutils import Vector, Matrix
 from .data_loader import data_loader
 
 
-def origin_to_corner(context):
-    old_active = context.active_object
-    old_cursor_location = Vector((0, 0, 0)) + context.scene.cursor.location
-    tmp_selected = context.selected_objects
-
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in tmp_selected:
-        obj.select_set(True)
-        # Vertex 2 corresponds to the origin of a Minecraft block in Minecraft
-        bottom_left_location = obj.matrix_world @ obj.data.vertices[2].co
-        context.scene.cursor.location = bottom_left_location
-        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-        obj.select_set(False)
-
-    context.view_layer.objects.active = old_active
-    context.scene.cursor.location = old_cursor_location
-
-    for obj in tmp_selected:
-        obj.select_set(True)
-
-
 def convert_coordinates(blender_matrix):
     """
     Convert Blender coordinates to Minecraft coordinates.
     """
-    print("Blender:\n", blender_matrix)
     minecraft_matrix = Matrix((
         ( blender_matrix[0][0],  blender_matrix[0][2], -blender_matrix[0][1],  blender_matrix[0][3]),
         ( blender_matrix[2][0],  blender_matrix[2][2], -blender_matrix[2][1],  blender_matrix[2][3] - 1),
         (-blender_matrix[1][0], -blender_matrix[1][2],  blender_matrix[1][1], -blender_matrix[1][3]),
         (0, 0, 0, 1)
     ))
-    print("Minecraft:\n", minecraft_matrix)
     return minecraft_matrix
 
+
+def get_property_string(obj):
+    formatted_property_pairs = [f'{property.name}:"{property.value}"' for property in obj.mcbde.block_properties]
+    property_string = ','.join(formatted_property_pairs)
+    return property_string
+        
 
 class GenerateButton(Operator):
     """
@@ -50,9 +33,6 @@ class GenerateButton(Operator):
     bl_description = "Generate command"
 
     def execute(self, context):
-        # TODO Should origins be forced to corners or not?
-        #origin_to_corner(context)
-
         # Default origin location is offset to the top north west corner of a command block at 0, 0, 0
         # Note that this offset is in Blender's coordinate system
         origin_offset = Vector((-0.5, 0.5, 0.5))
@@ -66,7 +46,6 @@ class GenerateButton(Operator):
                     break
                 
         final_origin_location = origin_location + origin_offset
-        print("FINAL ORIGIN LOCATION", final_origin_location)
         origin_text = f"~{round(final_origin_location[0], 4)} ~{round(final_origin_location[2], 4)} ~{round(-final_origin_location[1], 4)}"
                 
         command_string = "/summon block_display " + origin_text + " {Passengers: ["
@@ -84,54 +63,19 @@ class GenerateButton(Operator):
                 )
                 block_type = obj.mcbde.block_type
 
-                # Checking if we have a variant set
-                if obj.mcbde.block_variant:
-                    variant_pairs = obj.mcbde.block_variant.split(',')
-                    formatted_variant_pairs = [f'{key}:"{value}"' for key, value in (pair.split('=') for pair in variant_pairs)]
-                    variant = ','.join(formatted_variant_pairs)
-                else:
-                    variant = ""
+                # Getting the properties string
+                property_string = get_property_string(obj)
 
-                block_string = f'{{id: "minecraft:block_display", block_state: {{Name: "minecraft:{block_type}", Properties: {{{variant}}}}},' \
+                block_string = f'{{id: "minecraft:block_display", block_state: {{Name: "minecraft:{block_type}", Properties: {{{property_string}}}}},' \
                             + transformation_string + '},'
                 command_string = command_string + block_string
 
         # Trim the last comma and close the brackets
         command_string = command_string[:-1] + ']}'
-        print(command_string)
         context.scene.mcbde.command = command_string
 
         return {'FINISHED'}
 
-
-class OriginToCentreButton(Operator):
-    """
-    Operator for the moving origins to the centre button.
-    """
-    bl_idname = "object.origin_to_centre_button"
-    bl_label = "Origin to Centre"
-    bl_description = "Move the origins of all selected objects to their centres. Blender default, useful for manipulating objects"
-
-    def execute(self, context):
-        old_active = context.active_object
-        for obj in context.selected_objects:
-            context.view_layer.objects.active = obj
-            bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="MEDIAN")
-        context.view_layer.objects.active = old_active
-        return {'FINISHED'}
-
-
-class OriginToCornerButton(Operator):
-    """
-    Operator for the moving origins to the bottom corner button.
-    """
-    bl_idname = "object.origin_to_corner_button"
-    bl_label = "Origin to Corner"
-    bl_description = "Move the origins of all selected objects to the bottom corner. Minecraft default, useful for visualizing object origins within Minecraft"
-
-    def execute(self, context):
-        origin_to_corner(context)
-        return {'FINISHED'}
     
 class LoadDataButton(Operator):
     """
@@ -149,8 +93,6 @@ class LoadDataButton(Operator):
 
 classes = (
     GenerateButton,
-    OriginToCentreButton,
-    OriginToCornerButton,
     LoadDataButton,
 )
 

@@ -12,3 +12,4 @@
  - Account for texture uv rotation (anvil)
  - Give colour to grayscale blocks (leaves, stems)
  - Create a bed model since they are hardcoded into the game. (why??) So are conduits...
+ - Support textures that determine UVs automatically (composter)

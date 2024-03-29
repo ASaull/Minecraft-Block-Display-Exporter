@@ -1,5 +1,6 @@
 from bpy.types import Panel, Object
 from .data_loader import data_loader
+import bpy
 
 class McbdePanel(Panel):
     """
@@ -11,6 +12,7 @@ class McbdePanel(Panel):
     bl_region_type = "UI"
     bl_category = "MCBDE"
     bl_options = {'HEADER_LAYOUT_EXPAND'}
+
 
     def draw(self, context):
         layout = self.layout
@@ -30,7 +32,14 @@ class McbdePanel(Panel):
 
         if active_object and active_object.type == 'MESH' and active_object.mcbde:
             col.prop(active_object.mcbde, "block_type")
-            col.prop(active_object.mcbde, "block_variant")
+            #col.prop(active_object.mcbde, "block_variant")
+
+            # Adding the block properties
+            if "block_properties" in active_object.mcbde:
+                for property in active_object.mcbde.block_properties:
+                    row = layout.row()
+                    row.label(text=property.name)
+                    row.prop(property, "value")
         else:
             layout.label(text="Select a mesh object with MCBDE properties.")
 

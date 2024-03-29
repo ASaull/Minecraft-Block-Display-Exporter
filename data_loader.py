@@ -22,8 +22,14 @@ class DataLoader:
             "item_models": {},
         }
         self.initialized = False
-        self.tmp_dir = "C:\\Users\\saull\\Documents\\GitHub\\MCBDE"
-        # tempfile.mkdtemp()
+
+
+    def get_addon_directory(self):
+        addon_directory = bpy.utils.user_resource('SCRIPTS')
+        addon_directory = os.path.join(addon_directory, "addons", "Minecraft-Block-Display-Exporter", "images")
+        if not os.path.exists(addon_directory):
+            os.makedirs(addon_directory)
+        return addon_directory
 
 
     def load_json_directory(self, jar, path, data_dict):
@@ -47,13 +53,10 @@ class DataLoader:
         try:
             with zipfile.ZipFile(minecraft_location, 'r') as jar:
                 self.load_json_directory(jar, self.block_states_path, self.loaded_data["blockstates"])
-                
                 self.load_json_directory(jar, self.block_models_path, self.loaded_data["block_models"])
-
                 self.initialized = True
-                print("Data initialized!")
         except Exception as e:
-            print("Failed to load data.", e)
+            print("Error when loading data:", e)
 
 
     def get_data(self, data_dict, identifier):
@@ -65,28 +68,29 @@ class DataLoader:
         
 
     def load_image(self, name):
-        print("looking for image", name)
-
         if name in [i.name for i in bpy.data.images]:
-            print(name, "image already loaded")
             return bpy.data.images[name]
-        #try:
-        with zipfile.ZipFile(self.minecraft_location, 'r') as jar:
-            all_files = jar.namelist()
+        try:
+            with zipfile.ZipFile(self.minecraft_location, 'r') as jar:
+                all_files = jar.namelist()
 
-            split_name = name.split('/')
-            target_directory = split_name[0]
-            target_basename = split_name[1]
-            directory_path = self.textures_path + "/" + target_directory
+                split_name = name.split('/')
+                target_directory = split_name[0]
+                target_basename = split_name[1]
+                directory_path = self.textures_path + "/" + target_directory
 
-            target_image_files = [file for file in all_files if file.startswith(directory_path)]
+                target_image_files = [file for file in all_files if file.startswith(directory_path)]
 
-            for file_name in target_image_files:
-                basename = os.path.splitext(os.path.basename(file_name))[0]
-                if basename == target_basename:
-                    image_data = jar.read(file_name)
+                for file_name in target_image_files:
+                    basename = os.path.splitext(os.path.basename(file_name))[0]
+                    if basename == target_basename:
+                        image_data = jar.read(file_name)
+        except Exception as e:
+            print(f"Error occured when loading image {name} from {self.minecraft_location}:", e)
+            return
 
-        tmp_image_path = os.path.join(self.tmp_dir, name.replace("/", "-") + ".png")
+        tmp_image_directory = self.get_addon_directory()
+        tmp_image_path = os.path.join(tmp_image_directory, name.replace("/", "-") + ".png")
 
         with open(tmp_image_path, 'wb') as tmp_image_file:
             tmp_image_file.write(image_data)
@@ -95,10 +99,6 @@ class DataLoader:
         image.name = name
 
         return image
-
-        # except:
-        #     print("Failed to load image", name)
-            
 
         
     def is_initialized(self):
