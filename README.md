@@ -47,8 +47,8 @@ Once you copy the command from the textbox in Blender, you can open minecraft an
 command block, and the entity will be generated. Delete the command block and you're finished!
 
 |![howto_annotated_11](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/6b20e712-ecf1-4336-84c3-47eed1223f7d)|![howto_annotated_12](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/e0471304-fac1-4c8b-b1fd-0afb62340c28)|
-|![howto_annotated_13](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/60c3f518-131f-40aa-a91e-9afebad4fc55)|![howto_annotated_14](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/bd0090d5-ece9-46d8-8fd4-cc08022539cd)|
 |-|-|
+|![howto_annotated_13](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/60c3f518-131f-40aa-a91e-9afebad4fc55)|![howto_annotated_14](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/bd0090d5-ece9-46d8-8fd4-cc08022539cd)|
 
 Once the entity has been created, you can delete it with the command 
     /kill @e[type=minecraft:block_display, distance=..3]
