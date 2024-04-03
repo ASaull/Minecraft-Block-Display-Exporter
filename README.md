@@ -50,8 +50,10 @@ command block, and the entity will be generated. Delete the command block and yo
 |-|-|
 |![howto_annotated_13](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/60c3f518-131f-40aa-a91e-9afebad4fc55)|![howto_annotated_14](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/bd0090d5-ece9-46d8-8fd4-cc08022539cd)|
 
-Once the entity has been created, you can delete it with the command 
+Once the entity has been created, you can delete it with the command
+
     /kill @e[type=minecraft:block_display, distance=..3]
+
 which will delete *all* entities in a 3 block range. If you want more discretion, I highly reccommend the Axiom mod.
 
 **Axiom:** (https://modrinth.com/mod/axiom)
