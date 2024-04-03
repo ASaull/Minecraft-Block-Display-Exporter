@@ -56,7 +56,7 @@ Once the entity has been created, you can delete it with the command
 
 which will delete *all* entities in a 3 block range. If you want more discretion, I highly reccommend the Axiom mod.
 
-**Axiom:** (https://modrinth.com/mod/axiom)
+**Axiom:** https://modrinth.com/mod/axiom
 
 ## TODO
  - Support block models for blocks without variants
