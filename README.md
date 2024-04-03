@@ -59,7 +59,7 @@ Once the entity has been created, you can delete it with the command
 
     /kill @e[type=minecraft:block_display, distance=..3]
 
-which will delete *all* entities in a 3 block range. If you want more discretion, I highly reccommend the Axiom mod.
+which will delete *all* entities in a 3 block range. If you want more discretion, I highly recommend the Axiom mod.
 
 **Axiom:** https://modrinth.com/mod/axiom
 
