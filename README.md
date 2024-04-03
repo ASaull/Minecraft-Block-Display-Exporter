@@ -12,8 +12,9 @@ Download this repository as a zip file and install it in Blender as an add-on
 
 Once the add-on has been installed, you can find the MCBDE panel in the 3D view sidebar.
 
-![howto_annotated_1](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/d54193cf-7f1e-4d97-985e-19fd12eb2bea)
-![howto_annotated_2](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/9712ea85-71ee-41d1-b484-18c1e29ec543)
+⠀             |  ⠀
+:-------------------------:|:-------------------------:
+![]([https://...Dark.png](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/d54193cf-7f1e-4d97-985e-19fd12eb2bea))  |  ![]([https://...Ocean.png](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/9712ea85-71ee-41d1-b484-18c1e29ec543))
 
 Since we cannot legally bundle the Minecraft textures and models, you must link the add-on to your Minecraft installation directory. By default in Windows, this is located at
     C:\Users\<YOUR_USERNAME>\AppData\Roaming\.minecraft
