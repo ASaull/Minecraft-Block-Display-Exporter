@@ -4,6 +4,11 @@
 
 This is a Blender add-on for generating Minecraft block display commands.
 
+|In Blender|In Minecraft|
+|-|-|
+|![mcbde_1](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/eca8f41f-9d4e-4a42-8728-76f93e9c89bb)|![mcbde_2](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/322455c1-bb7c-4fbc-a85d-7f1c42892a99)|
+
+
 ## Installation
 
 Download this repository as a zip file and install it in Blender as an add-on
@@ -43,8 +48,8 @@ positioned as indicated in the screenshot.
 |![howto_annotated_10](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/1272e6f5-f229-4bf2-8ac4-63c7ccb0f149)|
 |-|
 
-Once you copy the command from the textbox in Blender, you can open minecraft and place a command block and a button to activate it where you want the entity to be placed. Simply paste the command into the
-command block, and the entity will be generated. Delete the command block and you're finished!
+Once you copy the command from the textbox in Blender, you can open Minecraft and place a command block and a button where you want the entity to be placed. Simply paste the command into the
+command block, press the button, and the entity will be generated. Delete the command block and you're finished!
 
 |![howto_annotated_11](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/6b20e712-ecf1-4336-84c3-47eed1223f7d)|![howto_annotated_12](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/e0471304-fac1-4c8b-b1fd-0afb62340c28)|
 |-|-|
