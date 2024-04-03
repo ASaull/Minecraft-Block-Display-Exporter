@@ -2,7 +2,7 @@
 
 ## About
 
-This is a Blender add-on for generating Minecraft block display commands.
+This is a Blender add-on for generating vanilla Minecraft block display commands.
 
 |In Blender|In Minecraft|
 |-|-|
