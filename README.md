@@ -20,8 +20,8 @@ Once the add-on has been installed, you can find the MCBDE panel in the 3D view 
 |![](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/d54193cf-7f1e-4d97-985e-19fd12eb2bea) | ![](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/9712ea85-71ee-41d1-b484-18c1e29ec543)|
 |-|-|
 
-Since we cannot legally bundle the Minecraft textures and models, you must link the add-on to your Minecraft installation directory. By default in Windows, this is located at
-    C:\Users\<YOUR_USERNAME>\AppData\Roaming\.minecraft
+Since we cannot legally bundle the Minecraft textures and models, you must link the add-on to a Minecraft jar file in your Minecraft installation directory. By default in Windows, this is located at
+    C:\Users\<YOUR_USERNAME>\AppData\Roaming\\.minecraft\versions\1.X.X\1.X.X.jar
 
 
 |![howto_annotated_3](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/2d022090-75a6-47fa-b382-cb28348393ed) | ![howto_annotated_4](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/20eb2d20-9604-42fd-9b96-7cb41acedee8)|
