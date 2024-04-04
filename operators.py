@@ -7,7 +7,7 @@ from .data_loader import data_loader
 
 def convert_coordinates(blender_matrix):
     """
-    Convert Blender coordinates to Minecraft coordinates.
+    Convert Blender coordinates to Minecraft coordinates
     """
     minecraft_matrix = Matrix((
         ( blender_matrix[0][0],  blender_matrix[0][2], -blender_matrix[0][1],  blender_matrix[0][3]),
@@ -22,6 +22,24 @@ def get_property_string(obj):
     formatted_property_pairs = [f'{property.name}:"{property.value}"' for property in obj.mcbde.block_properties]
     property_string = ','.join(formatted_property_pairs)
     return property_string
+
+
+def determine_origin_location():
+    """
+    If there is a user-specified command block origin in the scene, return its location,
+    otherwise return the default location
+    """
+    ORIGIN_OFFSET = Vector((-0.5, 0.5, 0.5))
+    
+    origin_location = Vector((0, 0, 0))
+
+    for obj in bpy.context.scene.objects:
+        if obj.type == 'MESH' and obj.mcbde:
+            if obj.mcbde.block_type == "origin_command_block":
+                origin_location = obj.location
+                break
+
+    return origin_location + ORIGIN_OFFSET
         
 
 class GenerateButton(Operator):
@@ -35,24 +53,15 @@ class GenerateButton(Operator):
     def execute(self, context):
         # Default origin location is offset to the top north west corner of a command block at 0, 0, 0
         # Note that this offset is in Blender's coordinate system
-        origin_offset = Vector((-0.5, 0.5, 0.5))
-        origin_location = Vector((0, 0, 0))
 
-        # Looking for origin command block object to update origin location
-        for obj in bpy.context.scene.objects:
-            if obj.type == 'MESH' and obj.mcbde:
-                if obj.mcbde.block_type == "origin_command_block":
-                    origin_location = obj.location
-                    break
-                
-        final_origin_location = origin_location + origin_offset
-        origin_text = f"~{round(final_origin_location[0], 4)} ~{round(final_origin_location[2], 4)} ~{round(-final_origin_location[1], 4)}"
+        origin_location = determine_origin_location()
+        origin_text = f"~{round(origin_location[0], 4)} ~{round(origin_location[2], 4)} ~{round(-origin_location[1], 4)}"
                 
         command_string = "/summon block_display " + origin_text + " {Passengers: ["
 
         # Getting the string for each block (Passenger) in the command
         for obj in bpy.context.scene.objects:
-            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type not in ["", "origin_command_block", "child_display_block"]:
+            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type not in ["", "origin_command_block"]:
                 blender_matrix = obj.matrix_world.copy()
                 minecraft_matrix = convert_coordinates(blender_matrix)
                 transformation_string = (

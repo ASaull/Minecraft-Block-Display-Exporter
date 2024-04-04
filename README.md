@@ -75,4 +75,4 @@ which will delete *all* entities in a 3 block range. If you want more discretion
  - Give colour to grayscale blocks (leaves, stems)
  - Create a bed model since they are hardcoded into the game. (why??) So are conduits...
  - Support textures that determine UVs automatically (composter)
- - Create a dedicate release zip file
+ - Create a dedicated release zip file
