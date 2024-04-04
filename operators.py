@@ -26,20 +26,18 @@ def get_property_string(obj):
 
 def determine_origin_location():
     """
-    If there is a user-specified command block origin in the scene, return its location,
-    otherwise return the default location
+    Return the starting point of the display entity in Minecraft.
+    
+    Default origin location is offset to the top north west corner of a command block at 0, 0, 0
     """
     ORIGIN_OFFSET = Vector((-0.5, 0.5, 0.5))
     
-    origin_location = Vector((0, 0, 0))
+    origin_location = origin_location + ORIGIN_OFFSET
 
-    for obj in bpy.context.scene.objects:
-        if obj.type == 'MESH' and obj.mcbde:
-            if obj.mcbde.block_type == "origin_command_block":
-                origin_location = obj.location
-                break
+    # account for Blender to Minecraft difference
+    origin_location = Vector((origin_location[0], origin_location[2], -origin_location[1]))
 
-    return origin_location + ORIGIN_OFFSET
+    return origin_location
         
 
 class GenerateButton(Operator):
@@ -51,17 +49,14 @@ class GenerateButton(Operator):
     bl_description = "Generate command"
 
     def execute(self, context):
-        # Default origin location is offset to the top north west corner of a command block at 0, 0, 0
-        # Note that this offset is in Blender's coordinate system
-
         origin_location = determine_origin_location()
-        origin_text = f"~{round(origin_location[0], 4)} ~{round(origin_location[2], 4)} ~{round(-origin_location[1], 4)}"
+        origin_text = f"~{round(origin_location[0], 4)} ~{round(origin_location[1], 4)} ~{round(origin_location[2], 4)}"
                 
         command_string = "/summon block_display " + origin_text + " {Passengers: ["
 
         # Getting the string for each block (Passenger) in the command
         for obj in bpy.context.scene.objects:
-            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type not in ["", "origin_command_block"]:
+            if obj.type == 'MESH' and obj.mcbde and obj.mcbde.block_type not in [""]:
                 blender_matrix = obj.matrix_world.copy()
                 minecraft_matrix = convert_coordinates(blender_matrix)
                 transformation_string = (

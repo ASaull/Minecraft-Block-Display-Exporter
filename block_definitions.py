@@ -2,7 +2,6 @@
 A list of all blocks and their names as of Minecraft 1.20
 """
 blocks=[
-    ("origin_command_block", "Origin Command Block", "The Command Block from which the command is run. You may only have one of these"),
     ("acacia_button", "Acacia button", "Acacia button"),
     ("acacia_door", "Acacia door", "Acacia door"),
     ("acacia_fence_gate", "Acacia fence gate", "Acacia fence gate"),

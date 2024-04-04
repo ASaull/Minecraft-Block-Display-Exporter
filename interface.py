@@ -32,7 +32,6 @@ class McbdePanel(Panel):
 
         if active_object and active_object.type == 'MESH' and active_object.mcbde:
             col.prop(active_object.mcbde, "block_type")
-            #col.prop(active_object.mcbde, "block_variant")
 
             # Adding the block properties
             if "block_properties" in active_object.mcbde:

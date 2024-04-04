@@ -372,21 +372,14 @@ def change_block_type(self, context):
     Change the model and data of the selected blocks to have the same
     model and data as the selected block type in the active block.
     """
-    block_type = copy.deepcopy(self["block_type"])
+    block_type = self["block_type"]
     tmp_selected = context.selected_objects
     tmp_active = context.active_object
 
-    # The origin command block will just display as a command block
-    if block_type == "origin_command_block":
-        block_type = "command_block"
-
-    # First get the default variant for this block type
     blockstate = data_loader.get_data("blockstates", block_type)
-
-    # Build the dict that stores block properties
+    
     block_properties = build_properties_dict(blockstate)
 
-    # Now we convert that dict into a blender enum
     selected_block_properties = get_default_properties(block_properties)
 
     outer_model_data = get_outer_model_data(blockstate, selected_block_properties)
@@ -424,11 +417,7 @@ def change_block_variant(self, context):
     tmp_selected = context.selected_objects
     tmp_active = context.active_object
 
-    block_type = copy.deepcopy(tmp_active.mcbde.block_type)
-
-    # The origin command block will just display as a command block
-    if block_type == "origin_command_block":
-        block_type = "command_block"
+    block_type = tmp_active.mcbde.block_type
 
     blockstate = data_loader.get_data("blockstates", block_type)
     
