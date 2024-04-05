@@ -118,7 +118,7 @@ def create_materials(textures):
     return materials
 
 
-def update_face_material(face, material_index, bm, uv):
+def update_face_material(face, material_index, image_size, bm, uv):
     """
     Apply the specified material to the specified face
 
@@ -136,25 +136,27 @@ def update_face_material(face, material_index, bm, uv):
 
     loop_data = face.loops
 
+    height_ratio = image_size[1]/image_size[0]
+
     # bottom left
     uv_data = loop_data[0][uv_layer].uv
-    uv_data.x = uv[0]/16 #x1
-    uv_data.y = 1 - uv[3]/16 #1 - y2
+    uv_data.x = uv[0]/16
+    uv_data.y = (1 - uv[3]/16) / height_ratio
 
     # bottom right
     uv_data = loop_data[1][uv_layer].uv
-    uv_data.x = uv[2]/16 #x2
-    uv_data.y = 1 - uv[3]/16 #1 - y2
+    uv_data.x = uv[2]/16
+    uv_data.y = (1 - uv[3]/16) / height_ratio
 
     # top right
     uv_data = loop_data[2][uv_layer].uv
-    uv_data.x = uv[2]/16 #x2
-    uv_data.y = 1 - uv[1]/16 #1 - y1
+    uv_data.x = uv[2]/16
+    uv_data.y = (1 - uv[1]/16) / height_ratio
 
     # top left
     uv_data = loop_data[3][uv_layer].uv
-    uv_data.x = uv[0]/16 #x1
-    uv_data.y = 1 - uv[1]/16 #1 - y1
+    uv_data.x = uv[0]/16
+    uv_data.y = (1 - uv[1]/16) / height_ratio
 
 
 def build_properties_dict(blockstate):
@@ -237,6 +239,9 @@ def build_model(obj, outer_model_data, model_data):
     Add the transformed cubes from the elements of model_data
     to the mesh data in obj.
 
+    TODO:
+    Refactor this out into several sub functions
+
     outer_model_data contains the rotation.
     """
     # Identity matrix, no rotation by default
@@ -244,7 +249,7 @@ def build_model(obj, outer_model_data, model_data):
 
     # We get the model rotation from the variant data
     # Note that the order the rotation is applied is relevant,
-    # and that there are no rotations in the z direction
+    # and that there are no rotations in the Minecraft z direction
     for key in reversed(list(outer_model_data)):
         if key == 'x':
             part_rotation_matrix = Matrix.Rotation(-radians(outer_model_data[key]), 4, 'X')
@@ -348,8 +353,10 @@ def build_model(obj, outer_model_data, model_data):
                 face = bm.faces.new((verts[i] for i in face_vertices))
                 
                 face_data = element["faces"][face_name]
-                material_index = materials.index(obj.data.materials[face_data["texture"]])
-                update_face_material(face, material_index, bm, face_data.get("uv", default_uv))
+                material = obj.data.materials[face_data["texture"]]
+                material_index = materials.index(material)
+                image_size = material.node_tree.nodes.get("Image Texture", None).image.size
+                update_face_material(face, material_index, image_size, bm, face_data.get("uv", default_uv))
 
         # Element rotation, rotation may be defined for a single element
         if "rotation" in element:

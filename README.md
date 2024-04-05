@@ -69,9 +69,12 @@ which will delete *all* entities in a 3 block range. If you want more discretion
  - Support removing model entirely, with empty type
  - Create user-visible error messages for file-loading errors
  - Allow the user to only input their .minecraft directory, and just choose the latest version of Minecraft automatically
- - Deal with cases where texture is animated (only take top 16x16)
- - Account for texture uv rotation (anvil)
+ - Account for texture uv rotation (anvil, command block)
  - Give colour to grayscale blocks (leaves, stems)
  - Create a bed model since they are hardcoded into the game. (why??) So are conduits...
  - Support textures that determine UVs automatically (composter)
  - Create a dedicated release zip file
+
+## Future Goals
+ - Support modded blocks/items
+ - Support resource packs
