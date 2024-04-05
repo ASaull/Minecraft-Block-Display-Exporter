@@ -22,22 +22,6 @@ def get_property_string(obj):
     formatted_property_pairs = [f'{property.name}:"{property.value}"' for property in obj.mcbde.block_properties]
     property_string = ','.join(formatted_property_pairs)
     return property_string
-
-
-def determine_origin_location():
-    """
-    Return the starting point of the display entity in Minecraft.
-    
-    Default origin location is offset to the top north west corner of a command block at 0, 0, 0
-    """
-    ORIGIN_OFFSET = Vector((-0.5, 0.5, 0.5))
-    
-    origin_location = origin_location + ORIGIN_OFFSET
-
-    # account for Blender to Minecraft difference
-    origin_location = Vector((origin_location[0], origin_location[2], -origin_location[1]))
-
-    return origin_location
         
 
 class GenerateButton(Operator):
@@ -49,7 +33,7 @@ class GenerateButton(Operator):
     bl_description = "Generate command"
 
     def execute(self, context):
-        origin_location = determine_origin_location()
+        origin_location = Vector((-0.5, 0.5, -0.5))
         origin_text = f"~{round(origin_location[0], 4)} ~{round(origin_location[1], 4)} ~{round(origin_location[2], 4)}"
                 
         command_string = "/summon block_display " + origin_text + " {Passengers: ["
