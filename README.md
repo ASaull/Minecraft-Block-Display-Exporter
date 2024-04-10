@@ -4,9 +4,10 @@
 
 This is a Blender add-on for generating vanilla Minecraft block display commands.
 
-|![mcbde_1](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/eca8f41f-9d4e-4a42-8728-76f93e9c89bb)|![mcbde_2](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/322455c1-bb7c-4fbc-a85d-7f1c42892a99)|
-|-|-|
 |Test Dummy In Blender|Test Dummy In Minecraft|
+|-|-|
+|![mcbde_1](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/eca8f41f-9d4e-4a42-8728-76f93e9c89bb)|![mcbde_2](https://github.com/ASaull/Minecraft-Block-Display-Exporter/assets/34991394/322455c1-bb7c-4fbc-a85d-7f1c42892a99)|
+
 
 ## Installation
 
