@@ -120,10 +120,10 @@ def create_materials(textures):
 
 def update_face_material(face, material_index, image_size, bm, uv):
     """
-    Apply the specified material to the specified face
+    Apply the specified material to the specified face.
 
     Note that Blender uvs start from the bottom left, while
-    Minecraft uvs start from the top left
+    Minecraft uvs start from the top left.
     
     uv format is [x1, y1, x2, y2]
     """
@@ -159,6 +159,30 @@ def update_face_material(face, material_index, image_size, bm, uv):
     uv_data.y = (1 - uv[1]/16) / height_ratio
 
 
+def add_to_dict(d, key, value):
+    """
+    Place value in the list under key in the dict,
+    without repeating key or value in dict.
+
+    If the value is none or false, we insert at the beginning
+    so that it will be the default
+    """
+    if key not in d:
+        d[key] = [value]
+    elif value not in d[key]:
+        if key == "none" or "false":
+            d[key].insert(0, value)
+        else:
+            d[key].append(value)
+
+
+def process_part(d, part):
+    for key, value in part.items():
+        values = value.split('|')
+        for value in values:
+            add_to_dict(d, key, value)
+            
+
 def build_properties_dict(blockstate):
     """
     Build a dict that stores the full set of possible block properties
@@ -167,7 +191,7 @@ def build_properties_dict(blockstate):
     Example return value:
     {'facing': ['north', 'east', 'west', 'south']}
     """
-    dict = {}
+    possible_properties = {}
 
     if "variants" in blockstate:
         for variant in blockstate["variants"]:
@@ -175,23 +199,44 @@ def build_properties_dict(blockstate):
                 # In this case, there must be exactly one variant, and it is blank
                 return {}
             for key, value in [key_value.split("=") for key_value in variant.split(",")]:
-                if key not in dict: 
-                    dict[key] = [value]
-                elif value not in dict[key]:
-                    dict[key].append(value)
+                add_to_dict(possible_properties, key, value)
     
     elif "multipart" in blockstate:
-        pass
-    
+        for part in blockstate["multipart"]:
+            if "when" not in part:
+                # In this case, there are no properties in this part (just a model)
+                continue
+            when = part["when"]
+            if "AND" in when:
+                for w in when["AND"]:
+                    process_part(possible_properties, w)
+            elif "OR" in when:
+                for w in when["OR"]:
+                    process_part(possible_properties, w)
+            else:
+                process_part(possible_properties, when)
+        
+        # Ensure that true and false always both exist even if blockstate does not specify both
+        # Also ensure none exists, if blockstate does not specify true and false
+        # Place false and none at the beginning
+        for property in possible_properties:
+            property_list = possible_properties[property]
+            if "true" in property_list and "false" not in property_list:
+                property_list.insert(0, "false")
+            elif "false" in property_list and "true" not in property_list:
+                property_list.append("true")
+            elif "true" not in property_list and "false" not in property_list and "none" not in property_list:
+                property_list.insert(0, "none")
+                
     else:
         print("Not a valid block model!")
 
-    return dict
+    return possible_properties
 
 
 def get_default_properties(block_properties):
     """
-    Return the default (first) properties in block_properties as a dict
+    Return the default (first) properties in block_properties as a dict.
     
     Example return value:
     {'facing': 'north'}
@@ -218,10 +263,48 @@ def get_selected_properties(obj):
     return selected
 
 
+def property_matches(selected_block_properties, when):
+    """
+    Return true if the selected block properties match the condition
+    in when.
+    """
+    for property_name, property_value in when.items():
+        property_values_split = property_value.split('|')
+        if property_name not in selected_block_properties:
+            return False
+        if selected_block_properties[property_name] not in property_values_split:
+            return False
+    return True
+
+
+def get_part_model(part, selected_block_properties):
+    """
+    Returns the model in when 
+    """
+    when = part.get("when", None)
+    if when:
+        if "AND" in when:
+            for w in when["AND"]:
+                if not property_matches(selected_block_properties, w):
+                    return None
+            return part["apply"]
+        elif "OR" in when:
+            for w in when["OR"]:
+                if property_matches(selected_block_properties, w):
+                    return(part["apply"])
+        else:
+            if property_matches(selected_block_properties, when):
+                return part["apply"]
+    else:
+        return part["apply"]
+
+
 def get_outer_model_data(blockstate, selected_block_properties):
     """
-    Return the model json corresponding to the
+    Return a list of model jsons corresponding to the
     selected block properties as defined in blockstate.
+
+    This is a list because multipart blocks may have several models.
     """
     if "variants" in blockstate:
         variant_string = ""
@@ -230,8 +313,15 @@ def get_outer_model_data(blockstate, selected_block_properties):
         variant_string = variant_string[:-1]
         for variant in blockstate["variants"]:
             if variant == variant_string:
-                return blockstate["variants"][variant]
-        return None
+                return [blockstate["variants"][variant]]
+        return []
+    elif "multipart" in blockstate:
+        part_list = []
+        for part in blockstate["multipart"]:
+            part_model = get_part_model(part, selected_block_properties)
+            if part_model: part_list.append(part_model)
+        return part_list
+
 
 
 def build_model(obj, outer_model_data, model_data):
@@ -447,7 +537,7 @@ def change_block_variant(self, context):
 
 def change_block_visuals(obj, outer_model_data):
     """
-    Update obj to have the mesh th 
+    
     """
     variant_name = ""
     for block_property in obj.mcbde.block_properties:
@@ -455,7 +545,7 @@ def change_block_visuals(obj, outer_model_data):
     mesh_name = obj.mcbde.block_type + "-" + variant_name[:-1]
 
     # Check if this model has already been created in the scene and reference it
-    # However, if this object is refreshing its own mesh we allow this
+    # However, we allow the object to refresh its own mesh
     for m in bpy.data.meshes:
         if m.name == mesh_name and m.name != obj.data.name:
             obj.data = m
@@ -477,9 +567,14 @@ def change_block_visuals(obj, outer_model_data):
 
     obj.data.materials.clear()
 
-    model_name = outer_model_data["model"].split('/')[-1]
+    for model in outer_model_data:
+        # If there are random variations, take the first one
+        if isinstance(model, list):
+            model = model[0]
 
-    model_data = data_loader.get_data("block_models", model_name)
+        model_name = model["model"].split('/')[-1]
 
-    build_model(obj, outer_model_data, model_data)
+        model_data = data_loader.get_data("block_models", model_name)
+
+        build_model(obj, model, model_data)
     

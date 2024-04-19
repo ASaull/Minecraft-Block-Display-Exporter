@@ -64,7 +64,6 @@ which will delete *all* entities in a 3 block range. If you want more discretion
 **Axiom:** https://modrinth.com/mod/axiom
 
 ## TODO
- - Support block models for blocks without variants
  - Support cross-shaped plants
  - Support removing model entirely, with empty type
  - Create user-visible error messages for file-loading errors
