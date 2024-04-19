@@ -170,10 +170,7 @@ def add_to_dict(d, key, value):
     if key not in d:
         d[key] = [value]
     elif value not in d[key]:
-        if key == "none" or "false":
-            d[key].insert(0, value)
-        else:
-            d[key].append(value)
+        d[key].append(value)
 
 
 def process_part(d, part):
@@ -222,11 +219,11 @@ def build_properties_dict(blockstate):
         for property in possible_properties:
             property_list = possible_properties[property]
             if "true" in property_list and "false" not in property_list:
-                property_list.insert(0, "false")
+                property_list.append("false")
             elif "false" in property_list and "true" not in property_list:
                 property_list.append("true")
             elif "true" not in property_list and "false" not in property_list and "none" not in property_list:
-                property_list.insert(0, "none")
+                property_list.append("none")
                 
     else:
         print("Not a valid block model!")
@@ -244,6 +241,12 @@ def get_default_properties(block_properties):
     selected = {}
 
     for property in block_properties:
+        if "false" in block_properties[property]:
+            selected[property] = "false"
+            continue
+        if "none" in block_properties[property]:
+            selected[property] = "none"
+            continue
         selected[property] = block_properties[property][0]
 
     return selected
@@ -321,7 +324,10 @@ def get_outer_model_data(blockstate, selected_block_properties):
             part_model = get_part_model(part, selected_block_properties)
             if part_model: part_list.append(part_model)
         return part_list
+    
 
+def generate_default_uv(from_vector, to_vector):
+    return [0, 0, 16, 16]
 
 
 def build_model(obj, outer_model_data, model_data):
@@ -426,7 +432,7 @@ def build_model(obj, outer_model_data, model_data):
             bm.verts.new(to_vector),
         ]
 
-        default_uv = [0, 0, 16, 16]
+        default_uv = generate_default_uv(from_vector, to_vector)
 
         # Fill in correct faces if they are present
         face_vertex_mapping = {
