@@ -125,7 +125,7 @@ def update_face_material(face, material_index, image_size, bm, uv):
     Note that Blender uvs start from the bottom left, while
     Minecraft uvs start from the top left.
     
-    uv format is [x1, y1, x2, y2]
+    uv format is [x1, y1, x2, y2] and is in Minecraft
     """
     uv_layer = bm.loops.layers.uv.active
 
@@ -243,6 +243,9 @@ def get_default_properties(block_properties):
     for property in block_properties:
         if "false" in block_properties[property]:
             selected[property] = "false"
+            if property == "up" and "north" in block_properties and "tall" in block_properties["north"]:
+                # This is a wall, default to true instead
+                selected[property] = "true"
             continue
         if "none" in block_properties[property]:
             selected[property] = "none"
@@ -309,6 +312,7 @@ def get_outer_model_data(blockstate, selected_block_properties):
 
     This is a list because multipart blocks may have several models.
     """
+    print(blockstate)
     if "variants" in blockstate:
         variant_string = ""
         for property, value in selected_block_properties.items():
@@ -326,8 +330,24 @@ def get_outer_model_data(blockstate, selected_block_properties):
         return part_list
     
 
-def generate_default_uv(from_vector, to_vector):
-    return [0, 0, 16, 16]
+def generate_default_uvs(from_vector, to_vector):
+    """
+    uv format is [x1, y1, x2, y2]
+    """
+    f = Vector((from_vector.x, -from_vector.y, from_vector.z))*16
+    t = Vector((to_vector.x, -to_vector.y, to_vector.z))*16
+
+    face_uvs = {}
+
+    face_uvs["down"] = [f.x, 16-t.y, t.x, 16-f.y]
+    face_uvs["up"] = [f.x, f.y, t.x, t.y]
+    face_uvs["west"] = [f.y, 16-t.z, t.y, 16-f.z]
+    face_uvs["east"] = [16-t.y, 16-t.z, 16-f.y, 16-f.z]
+    face_uvs["south"] = [f.x, 16-t.z, t.x, 16-f.z]
+    face_uvs["north"] = [16-t.x, 16-t.z, 16-f.x, 16-f.z]
+        
+        
+    return face_uvs
 
 
 def build_model(obj, outer_model_data, model_data):
@@ -432,7 +452,7 @@ def build_model(obj, outer_model_data, model_data):
             bm.verts.new(to_vector),
         ]
 
-        default_uv = generate_default_uv(from_vector, to_vector)
+        default_uvs = generate_default_uvs(from_vector, to_vector)
 
         # Fill in correct faces if they are present
         face_vertex_mapping = {
@@ -452,7 +472,7 @@ def build_model(obj, outer_model_data, model_data):
                 material = obj.data.materials[face_data["texture"]]
                 material_index = materials.index(material)
                 image_size = material.node_tree.nodes.get("Image Texture", None).image.size
-                update_face_material(face, material_index, image_size, bm, face_data.get("uv", default_uv))
+                update_face_material(face, material_index, image_size, bm, face_data.get("uv", default_uvs[face_name]))
 
         # Element rotation, rotation may be defined for a single element
         if "rotation" in element:
