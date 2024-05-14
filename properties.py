@@ -78,7 +78,7 @@ class McbdeBlockData(PropertyGroup):
         name="Variant",
         default="{}",
         description="The variations associated with the Minecraft block",
-        update=properties_util.change_block_variant,
+        # update=properties_util.change_block_variant,
         search=get_variants
     ) # type: ignore
     block_properties: CollectionProperty(

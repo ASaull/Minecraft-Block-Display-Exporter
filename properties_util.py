@@ -7,9 +7,35 @@ import copy
 import json
 
 from .data_loader import data_loader
-from .utils import deselect_all_except, reselect
 
 logger = logging.getLogger(__name__)
+
+
+def deselect_all_except(obj) -> list:
+    """
+    Deselect all objects except the object obj, or list of objects obj
+
+    Usage:
+    prev = deselect_all_except(obj)
+    Do Stuff
+    reselect(prev)
+
+    Args:
+        obj (Object or list): must be a Blender object or a list of Blender objects
+
+    Returns:
+        A list of previously selected objects for use with reselect()
+    """
+    prev = bpy.context.selected_objects
+    bpy.ops.object.select_all(action='DESELECT')
+
+    if isinstance(obj, list):
+        for obj in list:
+            obj.select_set(True)
+    else:
+        obj.select_set(True)
+
+    return prev
 
 
 def replace_textures(d, textures):
@@ -285,7 +311,7 @@ def property_matches(selected_block_properties, when):
 
 def get_part_model(part, selected_block_properties):
     """
-    Returns the model in when 
+    Return the model in when 
     """
     when = part.get("when", None)
     if when:
@@ -312,7 +338,6 @@ def get_outer_model_data(blockstate, selected_block_properties):
 
     This is a list because multipart blocks may have several models.
     """
-    print(blockstate)
     if "variants" in blockstate:
         variant_string = ""
         for property, value in selected_block_properties.items():
@@ -488,6 +513,31 @@ def build_model(obj, outer_model_data, model_data):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
+def update_block_properties(obj, selected_block_properties, block_properties=None, update_property=None):
+    """
+    Update obj to have the properties indicated in selected_block_properties.
+
+    If block_properties are specified, also reset and update the available properties.
+
+    If update_property is specified, only update that specific property.
+    """
+    if block_properties:
+        obj.mcbde.block_properties.clear()
+
+    if update_property and (obj.mcbde.block_properties is None or update_property not in obj.mcbde.block_properties):
+        return
+
+    for property in selected_block_properties:
+        if block_properties:
+            tmp_block_prop = obj.mcbde.block_properties.add()
+            tmp_block_prop.value_options = json.dumps(block_properties[property])
+            tmp_block_prop.name = property
+            tmp_block_prop["value"] = selected_block_properties[property]
+        elif update_property and update_property == property:
+            tmp_block_prop = obj.mcbde.block_properties.get(property)
+            tmp_block_prop["value"] = selected_block_properties[property]
+
+
 def change_block_type(self, context):
     """
     Called when block type is changed.
@@ -496,8 +546,8 @@ def change_block_type(self, context):
     model and data as the selected block type in the active block.
     """
     block_type = self["block_type"]
-    tmp_selected = context.selected_objects
-    tmp_active = context.active_object
+    selected = context.selected_objects
+    active = context.active_object
 
     blockstate = data_loader.get_data("blockstates", block_type)
     
@@ -509,22 +559,16 @@ def change_block_type(self, context):
 
     # Then we update the block properties and visuals of all selected blocks,
     # starting with the active object
-    for obj in [tmp_active] + [o for o in tmp_selected if o != tmp_active]:
+    for obj in [active] + [o for o in selected if o != active]:
         obj.mcbde["block_type"] = block_type
-        obj.mcbde.block_properties.clear()
 
-        for property in block_properties:
-            tmp_block_prop = obj.mcbde.block_properties.add()
-            tmp_block_prop.value_options = json.dumps(block_properties[property])
-            tmp_block_prop.name = property
-            tmp_block_prop.value = selected_block_properties[property]
+        update_block_properties(obj, selected_block_properties, block_properties)
 
         change_block_visuals(obj, outer_model_data)
 
-    # Finally, we reset the active and selected objects
-    context.view_layer.objects.active = tmp_active
-    for obj in tmp_selected:
+    for obj in selected:
         obj.select_set(True)
+    context.view_layer.objects.active = active
 
 
 def change_block_variant(self, context):
@@ -537,34 +581,42 @@ def change_block_variant(self, context):
     Note that we do not set the block type to be the same as the active block.
     This will, for example, allow the user to set the axis for several different logs.
     """
-    tmp_selected = context.selected_objects
-    tmp_active = context.active_object
-
-    block_type = tmp_active.mcbde.block_type
-
-    blockstate = data_loader.get_data("blockstates", block_type)
+    selected = context.selected_objects
+    active = context.active_object
     
-    selected_block_properties = get_selected_properties(tmp_active)
+    selected_block_properties = get_selected_properties(active)
 
-    outer_model_data = get_outer_model_data(blockstate, selected_block_properties)
+    # update the block visuals of all selected blocks, starting with the active block
+    for obj in [active] + [o for o in selected if o != active]:
+        block_type = obj.mcbde.block_type
 
-    if outer_model_data is None:
-        return
+        blockstate = data_loader.get_data("blockstates", block_type)
 
-    # Then we update the block visuals of all selected blocks, starting with the active block
-    for obj in [tmp_active] + [o for o in tmp_selected if o != tmp_active]:
+        
+        update_block_properties(obj, selected_block_properties, update_property=self.name)
+
+        selected_block_properties = get_selected_properties(obj)
+
+        outer_model_data = get_outer_model_data(blockstate, selected_block_properties)
+
+        if outer_model_data is None:
+            continue
+
         change_block_visuals(obj, outer_model_data)
-
-    # Finally, we reset the active and selected objects
-    context.view_layer.objects.active = tmp_active
-    for obj in tmp_selected:
+    
+    for obj in selected:
         obj.select_set(True)
+    context.view_layer.objects.active = active
 
 
 def change_block_visuals(obj, outer_model_data):
     """
     
     """
+    deselect_all_except(obj)
+    bpy.context.view_layer.objects.active = obj
+
+
     variant_name = ""
     for block_property in obj.mcbde.block_properties:
         variant_name = variant_name + block_property.name + "=" + block_property.value + ","
@@ -603,4 +655,3 @@ def change_block_visuals(obj, outer_model_data):
         model_data = data_loader.get_data("block_models", model_name)
 
         build_model(obj, model, model_data)
-    
